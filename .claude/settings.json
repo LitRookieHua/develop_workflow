@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/module_router.py\""
+            "command": "python \"D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/.claude/hooks/module_router.py\""
           }
         ]
       }
