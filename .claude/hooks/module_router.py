@@ -12,11 +12,6 @@ import sys
 def check(command: str) -> list:
     notes = []
     c = command.lower()
-    if re.search(r"gwm|c06g|de09g", c):
-        notes.append(
-            "GWM 项目分流：按具体车型 cpj 目录实际所在仓库确认归属——mcu_app_j6_v2 是新仓库，"
-            "v2 已有的项目不再用 mcu_app_j6；两仓库都有 cpj_gwm 目录，不能只按 OEM 判断，拿不准问用户"
-        )
     if "imobuilder" in c and ("02_workspace_j6" in c or "mcu_app_j6" in c):
         notes.append(
             "J6 编译前核对 workspace 依赖仓库分支：mcu 与 zos_msg 等依赖仓库必须同分支，"
