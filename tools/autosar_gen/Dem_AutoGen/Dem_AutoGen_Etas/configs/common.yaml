@@ -1,0 +1,8 @@
+# 通用配置: 各车型共用基线, 项目 yaml 只写差异项深合并覆盖
+check_dtc_table: false        # 脚本尚未引入, 占位
+gen_dem_table:
+  enabled: true
+  jumpdown: false       # 注意: 旧脚本硬编码缺省为 true, 这里显式改为 false
+  jumpup: false
+gen_event_ctrl: false         # 大部分情况不需要
+gen_fim_code: true

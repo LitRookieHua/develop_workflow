@@ -1,0 +1,6 @@
+# nvm_autogen 功能开关 - 通用默认配置
+# 三个功能: check_nvm_table / gen_nvm_arxml / gen_pdm_code
+# 取值: ON / OFF
+check_nvm_table: OFF   # 脚本尚未引入, 开启即报错中止, 保持 OFF
+gen_nvm_arxml: ON
+gen_pdm_code: ON

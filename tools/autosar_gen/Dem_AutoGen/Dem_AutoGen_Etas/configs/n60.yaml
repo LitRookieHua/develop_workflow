@@ -1,0 +1,5 @@
+# n60: 同 rx (jumpdown/jumpup 为 true)
+gen_dem_table:
+  enabled: true
+  jumpdown: true
+  jumpup: true

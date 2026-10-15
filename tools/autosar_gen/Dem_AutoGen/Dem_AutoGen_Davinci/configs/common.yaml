@@ -1,0 +1,6 @@
+# dem_autogen 功能开关 - 通用默认配置 (全部开启)
+# 三个功能: check_dtc_table / gen_dem_table / gen_fim_code
+# 取值: ON / OFF
+check_dtc_table: ON
+gen_dem_table: ON
+gen_fim_code: ON

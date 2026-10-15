@@ -1,0 +1,5 @@
+# rx: jumpdown/jumpup 与众不同
+gen_dem_table:
+  enabled: true
+  jumpdown: true
+  jumpup: true

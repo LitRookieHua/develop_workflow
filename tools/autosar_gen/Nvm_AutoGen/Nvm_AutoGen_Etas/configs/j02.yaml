@@ -1,0 +1,4 @@
+# j02 (mcu_app_j6_v2, cpj_fawvw/veh_j02): 全流程 (深合并覆盖 common.yaml)
+check_nvm_table: false
+gen_nvm_arxml: true
+gen_pdm_code: true

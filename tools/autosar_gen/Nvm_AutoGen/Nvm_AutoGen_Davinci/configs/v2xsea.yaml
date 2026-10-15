@@ -1,0 +1,4 @@
+# v2xsea: 全流程 (完整覆盖 common.yaml, 须列出全部功能项)
+check_nvm_table: OFF
+gen_nvm_arxml: ON
+gen_pdm_code: ON

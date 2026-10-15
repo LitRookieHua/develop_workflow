@@ -1,0 +1,4 @@
+# rx: 全流程 (深合并覆盖 common.yaml)
+check_nvm_table: false
+gen_nvm_arxml: true
+gen_pdm_code: true

@@ -1,0 +1,4 @@
+# v2xeu: 校验 DTC 表 + Dem 生成 + FiM 代码
+check_dtc_table: ON
+gen_dem_table: OFF
+gen_fim_code: ON

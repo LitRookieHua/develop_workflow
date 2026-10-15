@@ -1,0 +1,5 @@
+# n60: 跳过 arxml 更新与 BSW 生成, 仅生成 PDM 代码 (深合并覆盖 common.yaml)
+# 依赖上次 gen_nvm_arxml 产出的 NvM_Cfg.h
+check_nvm_table: false
+gen_nvm_arxml: false
+gen_pdm_code: true

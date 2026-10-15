@@ -1,0 +1,8 @@
+steps:
+  - name: 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: 读软件版本 DID F195
+    request: "22F195"
+    expect: "62F195"
+on_fail: abort
