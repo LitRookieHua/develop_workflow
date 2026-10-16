@@ -118,7 +118,7 @@ imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
 
 1. JIRA 问题单加评论（若 6.0 未写过则此时写）：**为什么不是问题**——引用分析报告结论（行为符合设计/规格出处、测试方法问题等）
 2. 查可用流转：`GET https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`，选 refuse/拒绝类流转（名称或目标状态含 refuse/拒绝/Declined 之类）
-3. 执行流转：`POST .../issue/<key>/transitions`，body `{"transition":{"id":"<id>"}}`；必填字段按 400 报错补齐（自适应，同 dev-workflow 第 12 步关 Problem 单的方式）
+3. 执行流转：`POST .../issue/<key>/transitions`，body `{"transition":{"id":"<id>"}}`；必填字段按 400 报错补齐（自适应，同 dev-workflow 第 12 步（3）关需求单的方式）
 4. Obsidian 笔记收尾：`status: Done`、`completed: 今天`、Notes 补分析结论与关单记录
 
 ## ⚠️ 关键规则
