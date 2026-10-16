@@ -44,7 +44,7 @@ owner open_id（已解析，可直接用）：
 
 PR 创建 + 通知后，用 CronCreate 建一个每 10 分钟的定时任务（session-only，cron 用 `7-57/10 * * * *` 避开整点分钟），监控本 story 所有未合并 PR：
 
-1. 查状态：`GET https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/<PROJ>/repos/<repo>/pull-requests/<id>`（token 同 PR 创建），state == `MERGED` 即完成
+1. 查状态：`GET https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/<PROJ>/repos/<repo>/pull-requests/<id>`（token 同 SKILL.md 阶段 5 的 PR 创建认证），state == `MERGED` 即完成
 2. **审批通过即自动 merge**：state == `OPEN` 且任意一位人工 reviewer（排除 bot_ci 等 bot 账号）`approved == true` → 立即 `POST .../pull-requests/<id>/merge?version=<GET到的version>` 自动合入（2026-09-21 用户确认：一人通过即可 merge，无需两位 reviewer 都通过）。merge 失败打印错误继续下轮监控
    - **所有仓库（含 mcu_app_tda4，2026-10-14 实际发生）：imoci（bot_ci）CI 审批是强制要求**：人工 reviewer 全部 approved，merge 仍会被 veto（`Not all required reviewers have approved yet | imoci must review and approve`；CI 失败时还会加 `Some reviewers have requested changes: imoci`），必须等 CI 跑完 bot_ci 自动批后再 merge（CI 审批可能耗时 1 小时以上，期间监控轮次只需简短带过继续等）
    - **CI 失败（imoci NEEDS_WORK）的处置（2026-10-14 经验）**：
@@ -55,7 +55,7 @@ PR 创建 + 通知后，用 CronCreate 建一个每 10 分钟的定时任务（s
      - ⚠️ 推空 commit 前确认当前分支：checkout 被未跟踪文件挡住而失败时，后续 commit 会落在原分支（2026-10-14 实际推错过分支）。先看 checkout 输出再 commit；未跟踪的 `ti_j721s2_mcu_mcal/` 目录挡 checkout 时直接 `rm -rf` 掉（构建产物）
    - **zos_msg develop 分支仅允许 fast-forward merge**：develop 有新提交时 merge 会被 veto（Control Freak 提示 must rebase），需 SSH 执行 `git fetch origin && git checkout <feature分支> && git rebase origin/develop && git push --force-with-lease`，rebase 后 CI 会重新触发、bot_ci 审批重置，需重新等待
    - merge 409 报 `PullRequestOutOfDateException` 时用响应体里的 `currentVersion` 重试；veto 详细原因在错误响应体的 `errors[].vetoes[].summaryMessage`
-3. **PR MERGED** → 飞书通知本人（姚华 `ou_1ec2bf00af2d4b80a88cc51ed6cdc6ee`，`lark-cli im +messages-send --as user`），该 PR 移出监控列表；监控列表为空（全部合并）→ 再通知本人「全部 PR 已合并」，CronDelete 停止监控，并**自动执行收尾（关单+通知报告人，无需用户确认）**
+3. **PR MERGED** → 飞书通知本人（姚华 `ou_1ec2bf00af2d4b80a88cc51ed6cdc6ee`，`lark-cli im +messages-send --as user`），该 PR 移出监控列表；监控列表为空（全部合并）→ 再通知本人「全部 PR 已合并」，CronDelete 停止监控，并**自动执行 SKILL.md 阶段 5 收尾步骤（关单+通知报告人，无需用户确认）**
 4. **PR DECLINED** → 同样飞书通知本人，但**继续监控**其余 PR（不删任务，等用户处理）
 5. **久未审批催审**（可选，用户要求时启用）：用状态文件计数，第 N 次（如 18 次）检测仍无审批 → 给韩乐乐发加急催审——先 `lark-cli im +messages-send --as bot --user-id <韩乐乐open_id> --text "..."`（加急要求 bot 是消息发送者），再 `lark-cli im messages urgent_app --message-id <id> --user-id-type open_id --data '{"user_id_list":["<韩乐乐open_id>"]}' --as bot`；bot 发送失败则降级 `--as user` 普通消息。加急只发一次（urgent_sent 标志）
 6. 无变化则简短带过
