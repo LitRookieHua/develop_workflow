@@ -29,6 +29,8 @@ ssh yaohua@10.0.12.42 "cd <workspace>/src/<依赖仓库> && git branch --show-cu
 
 编译阶段遇到以下问题按对应方案处理：
 
+本节 imobuilder 命令均在服务器上对应 workspace 目录执行（SSH，同上文命令形式）。
+
 - **遇到 parking_dr / uper_app 的问题 → 更新 parking_dr 和 uper_app 固件**（这两个包是远端预编译产物，本地缓存的旧固件会导致链接结果异常，如 final bin 超大小限制）：
   1. 清空 download 目录内容：TDA4 为 workspace 下 `output/armv7-r-generic-tda4-r5f-llvm/release/download`；J6 为 `output/armv8-r-generic-gcc-r52/release/download`
   2. `imobuilder configure --ci_service_token 'Bearer <jwt>'`（⚠️ Bearer 和 token 之间必须有空格，拼成 `BearereyJ...` 或裸 JWT 都会 401；jwt 取自 `.imobuilder` 里的 CI token，不要暴露）
