@@ -1,0 +1,36 @@
+# D3ACYI-1832 V2XEU 10 03 会话重入安全重锁验证
+# 复现问题单 D3ACYI-1830 步骤：扩展会话解锁后再次 10 03，安全状态必须重新锁定
+# 判定：
+#   重入后 security_access 成功（6702，新种子有效）= 重锁已生效（预期/修复后）
+#   重入后 security_access 失败（7F2724 NRC 24，零种子）= bug 复现
+# 时序对齐 BLF：50 03 与 27 61 间隔 1.254s，重入后延时 1200ms
+steps:
+  # --- 场景 A：bug 主路径（BLF t=53~58 复现步骤）---
+  - name: A1 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: A2 第一次安全解锁
+    security_access: app
+  - name: A3 会话重入 10 03（bug 触发点）
+    request: "1003"
+    expect: "5003"
+    delay_after_ms: 1200
+  - name: A4 重入后再次解锁（核心判定：PASS=已重锁 / FAIL NRC24=bug 复现）
+    security_access: app
+  # --- 场景 B：重复验证稳定性（BLF t=60 二次复现）---
+  - name: B1 再次会话重入
+    request: "1003"
+    expect: "5003"
+    delay_after_ms: 1200
+  - name: B2 第三次解锁（核心判定）
+    security_access: app
+  # --- 场景 C：回默认会话路径回归（原有 10 01 重锁机制不受影响）---
+  - name: C1 回默认会话
+    request: "1001"
+    expect: "5001"
+  - name: C2 再进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: C3 默认往返后解锁（回归：应正常成功）
+    security_access: app
+on_fail: continue

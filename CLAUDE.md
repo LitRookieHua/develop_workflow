@@ -22,7 +22,9 @@
 ## 目录约定
 
 - `docs/analysis/` 具体问题个案报告；`docs/design/` 设计方案
-- `tests/harness/` 测试桩：DiagnosticTester 跑测试用例、LogCollection 采集 MCU 日志分析
+- `tests/harness/` 测试桩，两层结构（详见 `tests/harness/README.md`）：
+  - **通用手段**：`diag_test/`（DiagnosticTester 跑用例）、`mcu_log/`（LogCollection / 调试串口采集）——只放与具体问题无关的通用工具
+  - **问题专属**：`tests/harness/<模块名>_<harness描述>/`（如 `dcm_sec_relock_1003`、`dcm_did_f190`）——根目录放 python 脚本，`testcases/` 放用例，`logs/` 放运行产物与取证证据；越轻量、解耦越干净越好
 - `tools/` 工具**运行时权威源**（10_tools 已冻结不再更新，工具迭代在这里做）
 
 ## skill 入口

@@ -1,0 +1,57 @@
+# D3ACYI-1832 负载复现用例：模拟 BLF 环境的 3E 80 功能寻址流量后重入 10 03
+# 背景：低负载用例（case_d3acyi1832_1003_relock）9/9 PASS 未复现；
+# BLF 环境有 110 帧 3E 80（0x7df，0.044~0.9s 间隔）持续负载，CanIf Tx 确认
+# 在该负载下丢失/超时 → PostProcessor 回滚 → 不重锁。本用例模拟该负载密度。
+# 3E 80 功能寻址：ECU 不回响应（TesterPresent suppressPosRspMsgIndicationBit），
+# 发完即记，步骤间隔 100ms ≈ BLF 密集簇。
+steps:
+  - name: L0 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: L1 解锁
+    security_access: app
+  # --- 模拟 BLF 3E 80 负载（第一轮 20 帧）---
+  - { name: keepalive_01, request: "3E80", addressing: functional }
+  - { name: keepalive_02, request: "3E80", addressing: functional }
+  - { name: keepalive_03, request: "3E80", addressing: functional }
+  - { name: keepalive_04, request: "3E80", addressing: functional }
+  - { name: keepalive_05, request: "3E80", addressing: functional }
+  - { name: keepalive_06, request: "3E80", addressing: functional }
+  - { name: keepalive_07, request: "3E80", addressing: functional }
+  - { name: keepalive_08, request: "3E80", addressing: functional }
+  - { name: keepalive_09, request: "3E80", addressing: functional }
+  - { name: keepalive_10, request: "3E80", addressing: functional }
+  - { name: keepalive_11, request: "3E80", addressing: functional }
+  - { name: keepalive_12, request: "3E80", addressing: functional }
+  - { name: keepalive_13, request: "3E80", addressing: functional }
+  - { name: keepalive_14, request: "3E80", addressing: functional }
+  - { name: keepalive_15, request: "3E80", addressing: functional }
+  - { name: keepalive_16, request: "3E80", addressing: functional }
+  - { name: keepalive_17, request: "3E80", addressing: functional }
+  - { name: keepalive_18, request: "3E80", addressing: functional }
+  - { name: keepalive_19, request: "3E80", addressing: functional }
+  - { name: keepalive_20, request: "3E80", addressing: functional }
+  - name: L2 负载后会话重入 10 03
+    request: "1003"
+    expect: "5003"
+    delay_after_ms: 1200
+  - name: L3 负载后再次解锁（核心判定：FAIL NRC24 = bug 复现）
+    security_access: app
+  # --- 第二轮：负载 + 重入 + 负载 + 解锁 ---
+  - { name: keepalive_21, request: "3E80", addressing: functional }
+  - { name: keepalive_22, request: "3E80", addressing: functional }
+  - { name: keepalive_23, request: "3E80", addressing: functional }
+  - { name: keepalive_24, request: "3E80", addressing: functional }
+  - { name: keepalive_25, request: "3E80", addressing: functional }
+  - { name: keepalive_26, request: "3E80", addressing: functional }
+  - { name: keepalive_27, request: "3E80", addressing: functional }
+  - { name: keepalive_28, request: "3E80", addressing: functional }
+  - { name: keepalive_29, request: "3E80", addressing: functional }
+  - { name: keepalive_30, request: "3E80", addressing: functional }
+  - name: L4 二次会话重入
+    request: "1003"
+    expect: "5003"
+    delay_after_ms: 1200
+  - name: L5 二次解锁（核心判定）
+    security_access: app
+on_fail: continue
