@@ -3,27 +3,15 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# 运行日志/产物（所有层级）
+# 运行日志（所有层级）
 logs/
 *.log
 
-# Office 临时文件
-~$*
-
-# tools/DiagnosticTester：ZLG SDK 手动组装区（README 保留）、本地用例/产物
-tools/DiagnosticTester/vendor/zlgcan/*
-!tools/DiagnosticTester/vendor/zlgcan/README.md
-tools/DiagnosticTester/spec/
-tools/DiagnosticTester/zlg/
+# tools/DiagnosticTester：本地测试用例
 tools/DiagnosticTester/testcase/
 
-# tools/ProgramBoard：刷写镜像包与 OTA 产物
-tools/ProgramBoard/ota_package/
+# tools/ProgramBoard：刷写镜像包
 tools/ProgramBoard/xmodem_tools_*/
 
-# tools/autosar_gen/Dem_AutoGen：表格输入与备份/中间产物
-tools/autosar_gen/Dem_AutoGen/clear_dem_arxml/backup/
-tools/autosar_gen/Dem_AutoGen/Merger_Total_FID.xlsx
+# tools/autosar_gen/Dem_AutoGen：清理备份
 tools/autosar_gen/Dem_AutoGen/Dem_AutoGen_Davinci/clear_dem_arxml/backup/
-tools/autosar_gen/Dem_AutoGen/Dem_AutoGen_Davinci/Merger_Total_FID.xlsx
-tools/autosar_gen/Dem_AutoGen/Dem_AutoGen_Etas/gen_dem_arxml/_tmp_clear/
