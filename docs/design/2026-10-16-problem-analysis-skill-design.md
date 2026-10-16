@@ -16,7 +16,7 @@
 | 事项 | 约定 |
 | --- | --- |
 | 工作区 | **V2 工作区与老工作区并存**：V2（`01_Workspace_TDA4_V2` / `02_Workspace_J6_V2`）专用于问题分析，一般不提交代码；老工作区用于正式开发 |
-| mcu 仓库 | TDA4_V2 → `mcu_app_tda4`；J6_V2 → `mcu_app_j6_v2` |
+| mcu 仓库 | TDA4_V2 → `mcu_app_tda4`；J6_V2 按项目归属选 `mcu_app_j6`（存量）/ `mcu_app_j6_v2`（新项目），双仓库规则同 dev-workflow（2026-10-16 评审修正：实测 V2 工作区两仓库并存，原"固定 mcu_app_j6_v2"假设不成立） |
 | git/token 硬规则 | 与 dev-workflow 完全一致：git 写操作一律 SSH、本地 Y: 盘只读加 `-c core.filemode=false`、token 从 `C:\Users\YH\.claude\` 读取不内联（skill 内引用规则，不复制全文） |
 | 后续流程 | 是问题 → `story-creation`（老工作区立项）→ `dev-workflow`（老工作区开发）；不是问题 → refuse 关单 |
 

@@ -29,3 +29,4 @@
 
 - 立项（建 Obsidian 笔记 / 建 JIRA Story）→ `story-creation`
 - 开发全流程（分支/编译/刷写/验证/PR/收尾）→ `dev-workflow`
+- 问题分析（V2 工作区，分析/refuse 分流）→ `problem-analysis`
