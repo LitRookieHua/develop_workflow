@@ -1,0 +1,27 @@
+can:
+  device: CX-USBCANFD
+  channel: 0
+  fd: false
+  baudrate: 500000
+
+diagnostic:
+  request_id: 0x737
+  response_id: 0x7B7
+  functional_id: 0x7DF
+
+timing:
+  p2_ms: 50
+  p2star_ms: 5000
+  step_delay_ms: 100
+
+# 经典 CAN 变体（对照 BLF 环境复现 D3ACYI-1832）：BLF 中 18B 种子响应走
+# CanTp FF/CF 多帧（00 12 67 61 ...），FD 模式下同长度为单帧、确认链短，
+# 不复现。本配置强制经典帧 → 多帧 CanTp 链路（N_As/N_Bs/逐 CF 确认）。
+# 安全节同 v2xeu_cx.yaml：app = AES-CMAC（0x01/0x02，等级 1）
+security:
+  app:
+    seed_sub: 0x01
+    key_sub: 0x02
+    algorithm: aes_cmac_seed
+    params:
+      key: "B6042A5FFBFAED83539F4C42D44CFFDF"

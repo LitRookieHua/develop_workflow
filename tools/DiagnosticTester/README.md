@@ -8,8 +8,10 @@
     python -m pip install -r requirements.txt
     python DiagnosticTester.py run testcase/example/example.yaml --config configs/example.yaml
 
-前提：ZLG 卡需 ZLGCAN SDK 按 `vendor/zlgcan/README.md` 组装（创芯卡无需，见下）、CAN 卡已插、
-目标 ECU 已上电；testcase/ 不入仓库，首次使用需自备用例文件。免硬件体验可先跑
+前提：**CAN 卡优先用创芯 CX-USBCANFD**（`_cx` 配置，DLL 内置免组装），
+CX 卡不可用时再换周立功 ZLG 卡（`_zlg` 配置，需先按 `vendor/zlgcan/README.md`
+组装 ZLGCAN SDK）、CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
+自备用例文件。免硬件体验可先跑
 `python DiagnosticTester.py run testcase/example_mock/example_mock.yaml --config configs/example_mock.yaml`。
 
 ### 创芯卡（CX-USBCANFD）
