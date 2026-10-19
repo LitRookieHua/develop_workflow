@@ -18,7 +18,7 @@
 ## 使用
 
 ```bash
-cd Y:/01_Src/tools/ProgramBoard
+cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
 
 # 日常刷写（接电源）
 python ProgramBoard_j6b.py --port COM30 --psu-com COM44
@@ -78,7 +78,7 @@ python ProgramBoard_j6b.py --port COM30
 板子正常启动到 QNX 后，走 SSH 刷 OTA 整包（不动 uboot/fastboot）：
 
 ```bash
-cd Y:/01_Src/tools/ProgramBoard
+cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
 
 # 日常（板子已上电在线）
 python ota_j6b.py --port COM30

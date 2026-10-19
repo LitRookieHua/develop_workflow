@@ -1,5 +1,7 @@
 # develop_workflow 项目结构整合实施计划
 
+> ⚠️ **历史文档**：本文中"Y: 直编"等编码方式已于 2026-10-19 废止（Y: 盘仅许刷写读镜像/读代码/写 .imobuilder，代码写与 git 操作一律 SSH），设计文档模板也已重构——现行规则以 `CLAUDE.md` 与 skill 为准，本文仅作历史记录。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 将 dev-workflow / story-creation 两个 skill 与 10_tools 下 6 个工具整合为标准化的 develop_workflow 项目结构（依据 `docs/design/2026-10-15-develop-workflow-restructure-design.md`）。

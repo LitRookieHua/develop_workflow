@@ -1,5 +1,7 @@
 # develop_workflow 工作流项目结构整合设计
 
+> ⚠️ **历史文档**：本文中"Y: 直编"等编码方式已于 2026-10-19 废止（Y: 盘仅许刷写读镜像/读代码/写 .imobuilder，代码写与 git 操作一律 SSH），设计文档模板也已重构——现行规则以 `CLAUDE.md` 与 skill 为准，本文仅作历史记录。
+
 - 日期：2026-10-15
 - 状态：已确认
 - 背景：将 `C:\Users\YH\.claude\skills\` 下的 dev-workflow、story-creation 两个 skill 与 `D:\Workspace\01_Projects\02_Src\10_tools` 下的 6 个工具，整合为标准化的 `develop_workflow` 项目结构，用于优化结构、沉淀积累。

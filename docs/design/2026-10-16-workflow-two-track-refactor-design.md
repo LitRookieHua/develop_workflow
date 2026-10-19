@@ -1,5 +1,7 @@
 # 开发工作流双链路重构设计（feature-development + problem-analysis）
 
+> ⚠️ **历史文档**：本文中"Y: 直编"等编码方式已于 2026-10-19 废止（Y: 盘仅许刷写读镜像/读代码/写 .imobuilder，代码写与 git 操作一律 SSH），设计文档模板也已重构——现行规则以 `CLAUDE.md` 与 skill 为准，本文仅作历史记录。
+
 - 日期：2026-10-16
 - 状态：已确认
 - 分支：refactor/workflow-structure

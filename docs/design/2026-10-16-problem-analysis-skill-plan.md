@@ -1,5 +1,7 @@
 # problem-analysis Skill 实现计划
 
+> ⚠️ **历史文档**：本文中"Y: 直编"等编码方式已于 2026-10-19 废止（Y: 盘仅许刷写读镜像/读代码/写 .imobuilder，代码写与 git 操作一律 SSH），设计文档模板也已重构——现行规则以 `CLAUDE.md` 与 skill 为准，本文仅作历史记录。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 新建 `problem-analysis` skill——JIRA 问题单先分析再分流：是问题 → story-creation + dev-workflow；不是问题 → JIRA 说明理由 + refuse 关单。

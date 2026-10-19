@@ -1,5 +1,7 @@
 # 双链路工作流重构实现计划（feature-development + problem-analysis）
 
+> ⚠️ **历史文档**：本文中"Y: 直编"等编码方式已于 2026-10-19 废止（Y: 盘仅许刷写读镜像/读代码/写 .imobuilder，代码写与 git 操作一律 SSH），设计文档模板也已重构——现行规则以 `CLAUDE.md` 与 skill 为准，本文仅作历史记录。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 按 `docs/design/2026-10-16-workflow-two-track-refactor-design.md` 新建 feature-development skill（骨架+3 references）替换并删除 dev-workflow，重写 problem-analysis 为 4 阶段，清理全部交叉引用。

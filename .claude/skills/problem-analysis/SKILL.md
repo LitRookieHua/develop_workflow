@@ -17,7 +17,7 @@ description: JIRA 问题单分析与修复工作流（4 阶段：现场捕获与
 | --- | --- |
 | `10.0.12.42:/comp/user_data/yaohua/01_Src/01_Workspace_TDA4_V2` | TDA4 V2 工作区（问题分析专用） |
 | `10.0.12.42:/comp/user_data/yaohua/01_Src/02_Workspace_J6_V2` | J6 V2 工作区（问题分析专用） |
-| `Y:\01_Src\01_Workspace_TDA4_V2` / `Y:\01_Src\02_Workspace_J6_V2` | 上述工作区在 Windows 侧的编辑入口（改 .imobuilder、改代码走 Y: 直改） |
+| `Y:\01_Src\01_Workspace_TDA4_V2` / `Y:\01_Src\02_Workspace_J6_V2` | 上述工作区在 Windows 侧的只读入口（读代码、改 `.imobuilder`）；改代码与 git 操作一律 SSH |
 
 - V2 工作区与老工作区（01_Workspace_TDA4 / 02_Workspace_J6）**并存**：V2 做分析 + 验证性修复，**不建分支、不 commit、不 push**（改动留在 V2 工作区，git reset 可还原）；正式开发在老工作区走 feature-development
 - mcu 仓库：TDA4_V2 → `mcu_app_tda4`；J6_V2 按项目归属选 `mcu_app_j6`（存量项目：T51、N60、S52 等）或 `mcu_app_j6_v2`（新项目：J02、GWM 新项目、HONDA 等），判断规则见 feature-development 的 [references/workspace-setup.md](../feature-development/references/workspace-setup.md)（J6 双仓库规则）：看项目的 cpj 目录在哪个仓库下，⚠️ 两仓库都有 `cpj_gwm`，不能只按 OEM 判断，拿不准时问用户
@@ -121,9 +121,12 @@ imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
 
 命令在 `tools/PowerControl/` 目录下 Windows 本地执行。TDA4_V2 无自动刷写工具，验证前后的电源操作同样适用；台架无程控电源时提示用户手动断电/上电。
 
-在 V2 工作区做**验证性修复**：Y: 直编修复 → 编译 → 刷板 → 验证。**不建分支、不 commit、不 push**——改动留在 V2 工作区作为验证证据，正式代码由 feature-development 在老工作区重做提交。
+在 V2 工作区做**验证性修复**：SSH 写修复代码 → 编译 → 刷板 → 验证。**不建分支、不 commit、不 push**——改动留在 V2 工作区作为验证证据，正式代码由 feature-development 在老工作区重做提交。
 
-1. **最小化修复**：在确定的根因点修改代码/配置，避免涟漪效应（Y: 盘直编）
+1. **最小化修复**：在确定的根因点修改代码/配置，避免涟漪效应。代码写走 SSH（Y: 盘禁止写源码）：
+   - 文件先写到 D: 本地暂存（或 heredoc 生成），再 `scp` 推到服务器 V2 工作区对应路径
+   - 小改动直接 `ssh yaohua@10.0.12.42 "cat > <服务器路径> <<'EOF' ... EOF"`
+   - 写法细则同 feature-development 阶段 3
 2. **编译**：命令同阶段 2（4），排障同 feature-development/references/build-troubleshooting.md
 3. **刷写（仅 J6，Windows 本地执行）**：用 feature-development 同款工具 `tools/ProgramBoard`，`--img-dir` 指向 **V2 工作区**的编译输出：
 
@@ -140,7 +143,7 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 
 ### 4.0 分析报告三处沉淀（时机按分流分支：是问题 → 阶段 3 验证通过后做；不是问题 → 用户确认结论后做）
 
-1. **docs/analysis/**：`docs/analysis/YYYY-MM-DD-<问题单号>-<主题>.md`——问题单摘要（复现步骤/现象原样）、分析过程、根因与依据、修复方案与验证结果（是问题分支；refuse 分支无此项）
+1. **docs/analysis/**：`docs/analysis/YYYY-MM-DD-<问题单号>-<主题>.md`——**按 [problem-analysis-report-template.md](../../docs/analysis/problem-analysis-report-template.md) 模板写**（七章标准缺陷报告主轴：缺陷概述含环境矩阵/复现性与回放/根因分析含知识召回+排除链+5Whys/分析结论与分流/修复方案含纠正与预防/验证结果/关闭与生命周期；refuse 分支时修复方案与验证结果两章写"不适用"）
 2. **Obsidian 笔记**：按项目模板在 `ClaudeCodeNote/Work Database/` 建独立分析笔记（frontmatter `jira_key` 指向问题单、`type: Problem`、`status: In Analysis`），Problem Analysis 章节填分析过程；结构参照 story-creation Stage 1
 3. **JIRA 问题单评论**：`POST /rest/api/2/issue/<key>/comment`，写分析过程要点 + 结论（中文 JSON 用 `--data-binary @file.json`，认证同阶段 1）
 
@@ -162,6 +165,6 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 
 与 feature-development 完全一致，详见该 skill「关键规则」与「Token 与安全」：
 
-- git 写操作（reset/clean/checkout/commit/push）一律 `ssh yaohua@10.0.12.42` 执行；本地 Y: 盘 git 仅只读且必须 `-c core.filemode=false`
+- **Y: 盘不允许任何 git 操作（含只读）**，也禁止写源码（仅许刷写读镜像/读代码/写 `.imobuilder`）：git 一律 `ssh yaohua@10.0.12.42` 执行，代码写走 SSH（scp/heredoc），详见 CLAUDE.md 安全红线
 - **V2 工作区只分析+验证性修复，不提交**：不建 feature 分支、不 commit/push；唯一例外是老工作区正式提交完成后才可还原 V2 改动
 - Token 从 `C:\Users\YH\.claude\` 配置读取，绝不内联进任何会被提交的文件；`.imobuilder` 含 CI token，不要暴露其内容

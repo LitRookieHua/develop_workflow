@@ -13,9 +13,9 @@ description: MCU 需求开发全流程工作流（5 阶段：需求解析与架�
 
 | 路径 | 角色 |
 | --- | --- |
-| `D:\Workspace\01_Projects\02_Src` | 本地代码，**autosar 代码生成专用**（tools/autosar_gen 生成目标） |
-| `10.0.12.42:/comp/user_data/yaohua/01_Src` | 服务器，**编译/代码分析/代码修复** |
-| `Y:\01_Src`（服务器映射，同一文件系统） | 服务器代码在 Windows 侧的编辑入口（改代码走 Y: 直编） |
+| `D:\Workspace\01_Projects\02_Src` | 本地代码，**autosar 代码生成专用**（tools/autosar_gen 生成目标）+ scp 推送暂存 |
+| `10.0.12.42:/comp/user_data/yaohua/01_Src` | 服务器，**编译/代码分析/代码修复/git 全部操作/代码写入** |
+| `Y:\01_Src`（服务器映射，同一文件系统） | **仅限：刷写读 build 镜像、读代码、写 `.imobuilder`**。代码写和 git 读写一律 SSH（见 CLAUDE.md 安全红线） |
 
 ---
 
@@ -35,7 +35,7 @@ description: MCU 需求开发全流程工作流（5 阶段：需求解析与架�
 | --- | --- | --- |
 | 1 | 需求解析与架构映射：story-creation 立项 + docs/design 技术方案 | Claude |
 | 2 | 任务准备与环境隔离：确认项目/分支/仓库，SSH 切 develop 建分支 | Claude（SSH） |
-| 3 | 核心配置与编码：Y: 直编、autosar 生成、SSH 编译 | Claude（SSH） |
+| 3 | 核心配置与编码：SSH 写代码（scp 推送）、autosar 生成、SSH 编译 | Claude（SSH） |
 | 4 | SIL 与台架隔离验证：刷写（仅 J6）+ 手动验证 | 刷写 Claude / 验证**用户手动** |
 | 5 | 审查与合流：commit/push、PR、监控合并、总结笔记、关单、通知 | Claude |
 
@@ -44,10 +44,10 @@ description: MCU 需求开发全流程工作流（5 阶段：需求解析与架�
 ## 阶段 1：需求解析与架构映射
 
 1. **立项**：走 `story-creation` skill——创建 Obsidian 笔记（Work Database/ + 项目模板）+ 创建 JIRA Story 并互相关联，细则全在该 skill
-2. **技术方案（所有需求必写）**：`docs/design/YYYY-MM-DD-<工单号>-<主题>-design.md`，内容含：
+2. **技术方案（所有需求必写）**：`docs/design/YYYY-MM-DD-<工单号>-<主题>-design.md`，**按仓库模板写**（MCU/AUTOSAR BSW 功能 → [autosar-general-feature-design-template.md](../../docs/design/autosar-general-feature-design-template.md)；通用功能 → [general-functional-design-template.md](../../docs/design/general-functional-design-template.md)；模板含属性表/术语/参考文档/约束假设/架构交互含并发上下文/详细设计/异常容错/验收标准/追溯矩阵/ADR/开放问题，小改动按模板内使用说明精简）。技术内容至少覆盖：
    - 需求摘要与验收标准（从 JIRA 需求单 description 提取，原样整理）
    - **BSW 模块影响分析**：明确影响的具体模块与参数（如 Dcm 的 DID/RID、Dem 的 Debouncing 策略、PduR 路由表、Nvm 块）
-   - 修改点清单（文件/模块级别）
+   - 修改点清单（文件/模块级别，作为附录）
    - 验证方案（用什么手段验证）
 3. Obsidian 笔记 **Design 章节链接**该设计文档
 
@@ -101,15 +101,14 @@ git push -u origin feature/<jira工单号>-<标题>-<release简易分支名>
 
 ## 阶段 3：核心配置与编码
 
-在 Y: 盘直接编辑（与服务器同一文件系统）。
+**代码修改一律经 SSH 在服务器上写**（Y: 盘禁止写源码：mode 位会被映射破坏 644→755，且本地工具链有 CRLF 风险）。可选方式：
 
-- develop 分支：直接编辑代码
+1. **scp 推送**（推荐）：文件先写到 D: 本地暂存（或直接 heredoc 生成），再 `scp` 推到服务器对应路径
+2. **SSH heredoc/服务器端编辑**：小改动直接 `ssh yaohua@10.0.12.42 "cat > <服务器路径> <<'EOF' ... EOF"`
+3. **autosar 生成产物**：生成目标为 D: 本地（`D:\Workspace\01_Projects\02_Src`），再 `scp -r` 同步到服务器对应仓库路径
+
+- develop 分支：如上修改
 - release 分支（第二个分支）：可直接 cherry-pick develop 分支的 commit（SSH 执行 `git cherry-pick <commit-hash>`），冲突时手工解决（release 与 develop 代码有差异）
-
-**autosar 生成代码场景**（Dcm/Dem/Nvm 配置类需求）：使用 `tools/autosar_gen/` 下工具生成代码：
-
-- 生成目标为 D: 本地路径（`D:\Workspace\01_Projects\02_Src`，autosar 专用）
-- 产物需进入服务器仓库时，从 D: 拷贝同步到 Y: 对应仓库路径，再走阶段 5 SSH 提交
 
 **编译**（SSH）：
 
@@ -247,14 +246,19 @@ curl -s -k -H "Authorization: Bearer <JIRA_TOKEN>" "https://jira.imotion.ai:7070
 
 ---
 
-## ⚠️ 关键规则：git 写操作禁止在 Windows 本地执行
+## ⚠️ 关键规则：Y: 盘只许刷写读镜像/读代码/写 .imobuilder，其余一律 SSH
 
-**Y:\01_Src 是服务器 10.0.12.42 磁盘 `/comp/user_data/yaohua/` 的网络映射（同一文件系统）**，但 Windows 本地 git 配置了 `core.autocrlf=true`，本地执行 reset/checkout 会把工作区文件改写成 CRLF，污染服务器端仓库（2026-09-10 实际发生：3432 个文件被污染，需服务器端 reset --hard 修复）。
+**Y:\01_Src 是服务器 10.0.12.42 磁盘 `/comp/user_data/yaohua/` 的网络映射（同一文件系统）**，但从 Windows 侧操作有两重破坏性：
 
-因此：
+1. 本地 git `core.autocrlf=true`：本地执行 reset/checkout 会把工作区文件改写成 CRLF，污染服务器端仓库（2026-09-10 实际发生：3432 个文件被污染，需服务器端 reset --hard 修复）
+2. Y: 映射不保留文件执行位：经 Y: 写源文件会把 mode 644→755 带进 commit（2026-10-19 J02 DoIP 实际发生，产生一笔需 force-push 撤回的 mode 修正 commit）
 
-- 所有 git 写操作（reset / clean / checkout / commit / push）一律通过 `ssh yaohua@10.0.12.42` 执行
-- 本地 Y: 盘的 git 命令仅用于只读查看，且必须加 `-c core.filemode=false`（否则 mode 位噪音淹没输出）
+因此（2026-10-19 用户定规）：
+
+- **允许的 Y: 操作**：刷写读 build 镜像（`--img-dir Y:/...`）、读代码（Read/Grep/Glob）、写 `.imobuilder`
+- **禁止的 Y: 操作**：
+  - git 操作（读和写都算，含只读查询）——全部 `ssh yaohua@10.0.12.42` 执行
+  - 代码写（Edit/Write 源文件）——改走 SSH：D: 暂存后 `scp` 推送，或 SSH heredoc 写入服务器路径
 
 ## Token 与安全
 
