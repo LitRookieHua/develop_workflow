@@ -13,7 +13,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from korad import KoradError, KoradKA3005P
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "PowerControl"))
+from power_control import PowerControlError, create_power_supply
 from uboot_console import UbootConsole, UbootTimeout
 from fastboot_runner import FastbootError, run_fastboot, run_fastboot_with_connect_retry
 
@@ -32,7 +33,9 @@ def parse_args():
     ws = here.parent.parent / "02_Workspace_J6"
     ap = argparse.ArgumentParser(description="J6B 固件刷写工具")
     ap.add_argument("--port", required=True, help="板子 A 核串口 COM 号")
-    ap.add_argument("--psu-com", default=None, help="KA3005P 电源串口 COM 号（不填则提示人工断电）")
+    ap.add_argument("--psu-com", default=None, help="电源串口 COM 号（不填则提示人工断电）")
+    ap.add_argument("--psu-type", default="korad", dest="psu_type",
+                    help="电源类型（默认 korad，见 tools/PowerControl）")
     ap.add_argument("--config", default=str(here / "configs" / "n60_mcu.json"))
     ap.add_argument("--img-dir", default=str(ws / "src/mcu_app_j6/build/cpj_baic_n60_d310/rpu_arm_gcc"))
     ap.add_argument("--retries", type=int, default=3)
@@ -163,7 +166,7 @@ def main() -> int:
 
     psu = None
     if args.psu_com:
-        psu = KoradKA3005P(args.psu_com)
+        psu = create_power_supply(args.psu_type, args.psu_com)
         log(f"电源: {args.psu_com} ({psu.identify()})")
 
     console = UbootConsole(args.port, cfg["uboot_baudrate"],
@@ -183,7 +186,7 @@ def main() -> int:
             console.clear_buffer()
             flash_once(cfg, console, args, log)
             return 0
-        except (UbootTimeout, FastbootError, KoradError) as e:
+        except (UbootTimeout, FastbootError, PowerControlError) as e:
             log(f"❌ 第 {attempt} 次失败: {e}")
         time.sleep(1)
 
