@@ -47,11 +47,14 @@ tools/PowerControl/
 工厂函数:
 
 ```python
-DRIVERS = {"korad": KoradKA3005P}
-
 def create_power_supply(psu_type: str, port: str) -> PowerSupply:
+    if psu_type == "korad":
+        from korad import KoradKA3005P   # 工厂内懒加载
+        return KoradKA3005P(port)
     ...
 ```
+
+> 实现偏差(相对本节初稿的 `DRIVERS = {...}` 顶层注册表):korad.py 需 import 本文件的 `PowerSupply`/`PowerControlError`,顶层互相 import 会循环,故驱动在工厂内懒加载——扩展成本相同(工厂加一个分支),已随实现落地。
 
 未知类型报错并列出可用类型名。
 
