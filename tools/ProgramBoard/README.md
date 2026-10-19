@@ -34,7 +34,8 @@ python ProgramBoard_j6b.py --port COM30
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--port` | （必填） | 板子 A 核串口 COM 号 |
-| `--psu-com` | 无 | KA3005P 串口 COM 号；不填走人工断电模式 |
+| `--psu-com` | 无 | 电源串口 COM 号（不填走人工断电模式；电源工具见 `../PowerControl/`） |
+| `--psu-type` | `korad` | 电源类型（见 `../PowerControl/`） |
 | `--config` | `configs/n60_mcu.json` | 刷写配置（分区、镜像、匹配关键字） |
 | `--img-dir` | N60 的 `rpu_arm_gcc` 目录 | 镜像相对路径的基目录 |
 | `--retries` | 3 | 失败重试次数 |
@@ -97,7 +98,8 @@ python ota_j6b.py --port COM30 --ota path/to/xxx.zip
 |---|---|---|
 | `--port` | （必填） | A 核串口 COM 号（N60 EVM 为 COM30 / SERIAL-C），上电/重启后串口登录执行 `pfctl -d` 使能 SSH |
 | `--ota` | ota_package/ 最新 zip | OTA 整包本地路径 |
-| `--psu-com` | 无 | KA3005P 串口 COM 号；不填则假定板子已上电启动 |
+| `--psu-com` | 无 | 电源串口 COM 号（不填则假定板子已上电启动） |
+| `--psu-type` | `korad` | 电源类型（见 `../PowerControl/`） |
 | `--host` | 192.168.1.239 | 板子 IP |
 | `--retries` | 3 | 失败重试次数 |
 | `--dry-run` | 关 | 只连接/删旧包/查空间，不上传不安装 |
@@ -124,7 +126,6 @@ python ota_j6b.py --port COM30 --ota path/to/xxx.zip
 ProgramBoard_j6b.py  CLI 入口 + 主流程编排（打断/刷写/重试）
 ota_j6b.py         OTA 整包刷写（SSH/SFTP + 校验 + ota_tool）
 uboot_console.py   串口监听、正则匹配、发送命令
-korad.py           KA3005P 电源控制（仅开关，电压固定 12V）
 fastboot_runner.py 经 Git Bash 调 fastboot
 configs/           刷写配置
 ota_package/       OTA 整包存放目录（缺省取最新 zip）
