@@ -27,7 +27,8 @@ import paramiko
 import serial
 
 sys.path.insert(0, str(Path(__file__).parent))
-from korad import KoradError, KoradKA3005P
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "PowerControl"))
+from power_control import PowerControlError, create_power_supply
 
 BOARD_USER = "root"
 BOARD_PASSWORD = "hct@Shanghai0427"
@@ -59,7 +60,9 @@ def parse_args():
     ap.add_argument("--ota", default=None,
                     help="OTA 整包 zip 路径（缺省取 ota_package/ 下最新 zip）")
     ap.add_argument("--psu-com", default=None,
-                    help="KA3005P 电源串口 COM 号（不填则假定板子已上电启动）")
+                    help="电源串口 COM 号（不填则假定板子已上电启动）")
+    ap.add_argument("--psu-type", default="korad", dest="psu_type",
+                    help="电源类型（默认 korad，见 tools/PowerControl）")
     ap.add_argument("--host", default="192.168.1.239", help="板子 IP")
     ap.add_argument("--retries", type=int, default=3)
     ap.add_argument("--dry-run", action="store_true",
@@ -407,7 +410,7 @@ def main() -> int:
 
     psu = None
     if args.psu_com:
-        psu = KoradKA3005P(args.psu_com)
+        psu = create_power_supply(args.psu_type, args.psu_com)
         log(f"电源: {args.psu_com} ({psu.identify()})")
 
     for attempt in range(1, args.retries + 1):
@@ -424,7 +427,7 @@ def main() -> int:
             enable_ssh_via_serial(args.port, log)
             ota_once(args, pkg, local_md5, log)
             return 0
-        except (OtaError, KoradError, paramiko.SSHException, OSError) as e:
+        except (OtaError, PowerControlError, paramiko.SSHException, OSError) as e:
             log(f"❌ 第 {attempt} 次失败: {e}")
         time.sleep(1)
 
