@@ -56,6 +56,8 @@ description: JIRA 问题单分析与修复工作流（4 阶段：现场捕获与
 
 切 mcu 仓库分支（SSH 执行，git 写操作禁止 Windows 本地执行）：
 
+**reset 前先查残留改动**：`ssh yaohua@10.0.12.42 "cd <工作区>/src/<mcu仓库> && git -c core.filemode=false status --short"`——V2 工作区顺序复用，若存在上一问题单未交付的验证性修复（改动非空），先问用户如何处理（交付/丢弃/暂存），不要直接 reset 销毁。
+
 ```bash
 ssh yaohua@10.0.12.42
 cd /comp/user_data/yaohua/01_Src/<01_Workspace_TDA4_V2|02_Workspace_J6_V2>/src/<mcu仓库>
@@ -76,7 +78,7 @@ git reset --hard && git clean -xdf && git checkout <branch_name> && git pull
 ```
 
 - ⚠️ 编译前核对各依赖仓库分支：`ssh yaohua@10.0.12.42 "cd <workspace>/src/<仓库> && git branch --show-current"`，必须与 mcu 一致（详见 feature-development/references/build-troubleshooting.md「编译前核对依赖仓库分支」）
-- `reset --hard` / `clean -xdf` 仅用于还原干净基线；**阶段 3 有验证性修复改动后不要再 reset**，需要还原基线时先确认修复已交付老工作区
+- `reset --hard` / `clean -xdf` 仅用于还原干净基线；**阶段 3 有验证性修复改动后不要再 reset**，需要还原基线时先确认修复已交付老工作区（见 4.1 第 4 条）
 
 **（4）编译 MCU 固件（SSH）**——保证分析对象是**可编过的基线代码**：
 
@@ -129,9 +131,9 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 
 ## 阶段 4：经验沉淀与流程防腐
 
-### 4.0 分析报告三处沉淀（呈现结论/完成验证时同步做）
+### 4.0 分析报告三处沉淀（时机按分流分支：是问题 → 阶段 3 验证通过后做；不是问题 → 用户确认结论后做）
 
-1. **docs/analysis/**：`docs/analysis/YYYY-MM-DD-<问题单号>-<主题>.md`——问题单摘要（复现步骤/现象原样）、分析过程、根因与依据、修复方案与验证结果
+1. **docs/analysis/**：`docs/analysis/YYYY-MM-DD-<问题单号>-<主题>.md`——问题单摘要（复现步骤/现象原样）、分析过程、根因与依据、修复方案与验证结果（是问题分支；refuse 分支无此项）
 2. **Obsidian 笔记**：按项目模板在 `ClaudeCodeNote/Work Database/` 建独立分析笔记（frontmatter `jira_key` 指向问题单、`type: Problem`、`status: In Analysis`），Problem Analysis 章节填分析过程；结构参照 story-creation Stage 1
 3. **JIRA 问题单评论**：`POST /rest/api/2/issue/<key>/comment`，写分析过程要点 + 结论（中文 JSON 用 `--data-binary @file.json`，认证同阶段 1）
 
