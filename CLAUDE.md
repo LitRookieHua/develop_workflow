@@ -30,5 +30,5 @@
 ## skill 入口
 
 - 立项（建 Obsidian 笔记 / 建 JIRA Story）→ `story-creation`
-- 开发全流程（分支/编译/刷写/验证/PR/收尾）→ `dev-workflow`
-- 问题分析（V2 工作区，分析/refuse 分流）→ `problem-analysis`
+- 需求开发（5 阶段：需求解析与架构映射/分支/编码/验证/PR 收尾）→ `feature-development`
+- 问题分析（V2 工作区，4 阶段：捕获回放/根因收敛/修复验证/沉淀分流）→ `problem-analysis`

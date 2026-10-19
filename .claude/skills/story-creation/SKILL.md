@@ -1,6 +1,6 @@
 ---
 name: story-creation
-description: 需求创建/工作项立项全流程：需求来源（JIRA 需求单/JIRA 问题单/手动输入）→ 创建 Obsidian 工作笔记（Work Database + 项目模板）→ 创建 JIRA Story 并关联来源单 → 回写笔记。这是一个跨系统的工作项创建过程，笔记和 JIRA 单都是产出物。当用户给出 JIRA 需求或问题单链接（如 IDC310BAICREQ-1158）要求"创建笔记"、说"建个 Story"、"新需求要立项/开发"、提供需求描述要落地时使用，即使用户只提到其中一个环节（只说建笔记或只说建 JIRA 单）。项目范围：IDC310BAIC(N60)/IDC310(GAC)/IDC510/D3ACYI(IDC300)/D1CYC(JETOUR)/F4CMC(CMC)/PDCU 等车型项目。注意：本 skill 只管立项创建；立项后的开发全流程（分支/编译/验证/PR）用 dev-workflow skill。
+description: 需求创建/工作项立项全流程：需求来源（JIRA 需求单/JIRA 问题单/手动输入）→ 创建 Obsidian 工作笔记（Work Database + 项目模板）→ 创建 JIRA Story 并关联来源单 → 回写笔记。这是一个跨系统的工作项创建过程，笔记和 JIRA 单都是产出物。当用户给出 JIRA 需求或问题单链接（如 IDC310BAICREQ-1158）要求"创建笔记"、说"建个 Story"、"新需求要立项/开发"、提供需求描述要落地时使用，即使用户只提到其中一个环节（只说建笔记或只说建 JIRA 单）。项目范围：IDC310BAIC(N60)/IDC310(GAC)/IDC510/D3ACYI(IDC300)/D1CYC(JETOUR)/F4CMC(CMC)/PDCU 等车型项目。注意：本 skill 只管立项创建；立项后的开发全流程（5 阶段：设计/分支/编码/验证/PR）用 feature-development skill。
 ---
 
 # Story 创建工作流（需求 → Obsidian 笔记 → JIRA）
@@ -94,7 +94,7 @@ description: 需求创建/工作项立项全流程：需求来源（JIRA 需求�
 
 ## 边界：立项之后的开发流程不在本 skill 范围
 
-立项后笔记会持续补充：实现分支、Code Changes、验证结果、PR 链接等。完整开发流程（切分支、编译、刷写、验证、提 PR、关闭工单）走 `dev-workflow` skill。
+立项后笔记会持续补充：实现分支、Code Changes、验证结果、PR 链接等。完整开发流程（切分支、编译、刷写、验证、提 PR、关闭工单）走 `feature-development` skill。
 
 ---
 
