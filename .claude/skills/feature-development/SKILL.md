@@ -137,6 +137,13 @@ imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
 
 ## 阶段 4：SIL 与台架隔离验证
 
+**电源操作规则**：刷写和验证都需要操作电源（程控电源，用 `tools/PowerControl/`，COM 号会漂移、用 list_ports 现查，当前 KA3005P 为 COM44）：
+
+- **刷写/验证之前**：重启电源——`python power_control.py --port <COM> cycle`（J6 刷写的断电冷启动已由 ProgramBoard 工具内置完成，刷写前无需重复执行）
+- **刷写/验证之后**：关闭电源——`python power_control.py --port <COM> off`
+
+命令在 `tools/PowerControl/` 目录下 Windows 本地执行。TDA4 无刷写工具，验证前后的电源操作同样适用；台架无程控电源时提示用户手动断电/上电。
+
 **刷写固件（仅 J6，Windows 本地执行）**：用 `tools/ProgramBoard/` 一键刷写工具（`ProgramBoard_j6b.py`）把阶段 3 编译产物刷到板子。**在本机 Windows 执行**（串口/电源 COM 口都在本机，不走 SSH）：
 
 ```bash

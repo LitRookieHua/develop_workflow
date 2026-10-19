@@ -114,6 +114,13 @@ imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
 
 ## 阶段 3：方案验证与精准修复（仅"是问题"，V2 工作区）
 
+**电源操作规则**：刷板和验证都需要操作电源（程控电源，用 `tools/PowerControl/`，COM 号会漂移、用 list_ports 现查，当前 KA3005P 为 COM44）：
+
+- **刷板/验证之前**：重启电源——`python power_control.py --port <COM> cycle`（J6 刷写的断电冷启动已由 ProgramBoard 工具内置完成，刷板前无需重复执行）
+- **刷板/验证之后**：关闭电源——`python power_control.py --port <COM> off`
+
+命令在 `tools/PowerControl/` 目录下 Windows 本地执行。TDA4_V2 无自动刷写工具，验证前后的电源操作同样适用；台架无程控电源时提示用户手动断电/上电。
+
 在 V2 工作区做**验证性修复**：Y: 直编修复 → 编译 → 刷板 → 验证。**不建分支、不 commit、不 push**——改动留在 V2 工作区作为验证证据，正式代码由 feature-development 在老工作区重做提交。
 
 1. **最小化修复**：在确定的根因点修改代码/配置，避免涟漪效应（Y: 盘直编）
