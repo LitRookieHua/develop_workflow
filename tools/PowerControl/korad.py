@@ -19,16 +19,19 @@ class KoradKA3005P(PowerSupply):
             raise KoradError(f"无法打开电源串口 {port}: {e}") from e
 
     def _cmd(self, cmd: str) -> str:
-        self._ser.reset_input_buffer()
-        self._ser.write((cmd + "\n").encode())
-        if cmd.endswith("?"):
-            return self._ser.read(64).decode(errors="ignore").strip()
-        return ""
+        try:
+            self._ser.reset_input_buffer()
+            self._ser.write((cmd + "\n").encode())
+            if cmd.endswith("?"):
+                return self._ser.read(64).decode(errors="ignore").strip()
+            return ""
+        except serial.SerialException as e:
+            raise KoradError(f"串口通信失败 ({cmd!r}): {e}") from e
 
     def identify(self) -> str:
         idn = self._cmd("*IDN?")
         if not idn:
-            raise KoradError("*IDN? 无响应——请检查 --psu-com 是否填成了板子串口")
+            raise KoradError("*IDN? 无响应——请检查串口是否填成了板子串口")
         return idn
 
     def output_on(self):

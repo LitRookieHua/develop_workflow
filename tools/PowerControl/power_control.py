@@ -62,6 +62,7 @@ def main() -> int:
     sub.add_parser("id", help="识别 + 回读电压")
     args = ap.parse_args()
 
+    psu = None
     try:
         psu = create_power_supply(args.psu_type, args.port)
         print(f"电源: {args.port} ({psu.identify()})")
@@ -77,11 +78,13 @@ def main() -> int:
             print(f"已上电 (VOUT={v}V)")
         else:  # id
             print(f"VOUT: {psu.measure_voltage()} V")
-        psu.close()
         return 0
     except PowerControlError as e:
         print(f"❌ {e}", file=sys.stderr)
         return 1
+    finally:
+        if psu is not None:
+            psu.close()
 
 
 if __name__ == "__main__":
