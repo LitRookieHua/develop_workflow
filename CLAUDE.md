@@ -7,8 +7,10 @@
   - 代码修改（写源文件）也禁止走 Y:——改走 SSH（D: 暂存后 `scp` 推送，或 SSH heredoc 写服务器路径）
   - 原因 1：`Y:\01_Src` 是服务器 10.0.12.42（`/comp/user_data/yaohua/01_Src`）的网络映射，本地 git `core.autocrlf=true` 会把工作区文件改写成 CRLF 污染服务器仓库（曾实际污染 3432 个文件）
   - 原因 2：Y: 映射不保留文件执行位，经 Y: 写文件会把 mode 644→755 带进 commit（2026-10-19 J02 DoIP 实际发生）
-- **Token 安全**：JIRA/Bitbucket token 从 `C:\Users\YH\.claude\` 下配置读取，绝不内联进任何会被提交的文件；`.imobuilder` 含 CI token，不要暴露其内容
-- **commit 格式**（MCU 仓库，全局规则）：`feat(模块名): [工单号] 项目名 + 描述`，**commit 内容必须全部英文**——完整规则见 [git-rules.md](.claude/skills/feature-development/references/git-rules.md)（权威源）
+- **令牌安全与认证**：token 只从 `C:\Users\YH\.claude\` 下配置读取，绝不内联进任何会被提交的文件；`.imobuilder` 含 CI token，不要暴露其内容。CI / JIRA / Bitbucket 的 token 存放位置、认证方式（Bearer 前缀拼接、`\r\n` 剥离等踩坑）一律先查 [token-authentication.md](.claude/references/token-authentication.md)（权威源）
+- **commit 格式**（MCU 仓库，全局规则）：`feat(模块名): [工单号] 项目名 + 描述`，**commit 内容必须全部英文**——完整规则见 [git-rules.md](.claude/references/git-rules.md)（权威源）
+- **JIRA 状态流转**：流转路线、transition id、必填字段、400 排错链一律先查 [jira-workflow-transitions.md](.claude/references/jira-workflow-transitions.md)（权威源），不要凭记忆猜 transition id；API 实测值与该文档冲突时以文档为准并及时更新文档
+- **AUTOSAR 生成代码**：`cpj_*/autosar/` 下源码的人工修改规则（patch 标记防生成覆盖等）一律先查 [autosar-code-generation.md](.claude/skills/feature-development/references/autosar-code-generation.md)（权威源，名称：autosar 代码生成规格；patch 规则是其中一个章节）
 
 ## 路径角色
 
@@ -29,6 +31,7 @@
   - **通用手段**：`diag_test/`（DiagnosticTester 跑用例）、`mcu_log/`（LogCollection / 调试串口采集）——只放与具体问题无关的通用工具
   - **问题专属**：`tests/harness/<模块名>_<harness描述>/`（如 `dcm_sec_relock_1003`、`dcm_did_f190`）——根目录放 python 脚本，`testcases/` 放用例，`logs/` 放运行产物与取证证据；越轻量、解耦越干净越好
 - `tools/` 工具**运行时权威源**（10_tools 已冻结不再更新，工具迭代在这里做）
+- `.tmp/` 临时文件（JIRA API 响应转储、取数中间产物等，不进 git）——**会话内产生的临时文件一律写 `.tmp/`，禁止落在仓库根目录**；`.tmp/` 内容可随时清理，重要结论要沉淀进 docs/ 或笔记后再清
 
 ## skill 入口
 

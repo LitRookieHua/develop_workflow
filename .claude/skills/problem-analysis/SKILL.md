@@ -20,11 +20,11 @@ description: JIRA 问题单分析与修复工作流（4 阶段：现场捕获与
 | `Y:\01_Src\01_Workspace_TDA4_V2` / `Y:\01_Src\02_Workspace_J6_V2` | 上述工作区在 Windows 侧的只读入口（读代码、改 `.imobuilder`）；改代码与 git 操作一律 SSH |
 
 - V2 工作区与老工作区（01_Workspace_TDA4 / 02_Workspace_J6）**并存**：V2 做分析 + 验证性修复，**不建分支、不 commit、不 push**（改动留在 V2 工作区，git reset 可还原）；正式开发在老工作区走 feature-development
-- mcu 仓库：TDA4_V2 → `mcu_app_tda4`；J6_V2 按项目归属选 `mcu_app_j6`（存量项目：T51、N60、S52 等）或 `mcu_app_j6_v2`（新项目：J02、GWM 新项目、HONDA 等），判断规则见 feature-development 的 [references/workspace-setup.md](../feature-development/references/workspace-setup.md)（J6 双仓库规则）：看项目的 cpj 目录在哪个仓库下，⚠️ 两仓库都有 `cpj_gwm`，不能只按 OEM 判断，拿不准时问用户
+- mcu 仓库：TDA4_V2 → `mcu_app_tda4`；J6_V2 按项目归属选 `mcu_app_j6`（存量项目）或 `mcu_app_j6_v2`（新项目），判断规则（J6 双仓库归属）一律查 feature-development 的 [references/workspace-setup.md](../../../references/workspace-setup.md)；拿不准时问用户
 
 ## 阶段 1：现场捕获与数据回放
 
-**拉问题单详情**——用 JIRA REST API（认证与端点见 story-creation skill 的「JIRA API 速查」，PAT Bearer）：
+**拉问题单详情**——用 JIRA REST API（认证见 ../../../references/token-authentication.md，PAT Bearer；端点见 story-creation skill 的「JIRA API 速查」）：
 
 - `GET https://jira.imotion.ai:7070/rest/api/2/issue/<问题单号>?fields=summary,description,status,fixVersions,components,assignee,reporter,issuelinks,attachment,customfield_15000,customfield_12007,customfield_12006`
 - **问题描述（复现步骤）在自定义字段 Problem Description = `customfield_12007`**——问题单的问题描述都放在该属性中，标准 description 字段经常为空；相邻有用字段：`customfield_12006` Problem Type、`customfield_12017` Root Cause Analysis。字段 id 可用 `?expand=names` 查全量字段名
@@ -78,7 +78,7 @@ cd ../zos_msg
 git reset --hard && git clean -xdf && git checkout <branch_name> && git pull
 ```
 
-- ⚠️ 编译前核对各依赖仓库分支：`ssh yaohua@10.0.12.42 "cd <workspace>/src/<仓库> && git branch --show-current"`，必须与 mcu 一致（详见 feature-development/references/build-troubleshooting.md「编译前核对依赖仓库分支」）
+- ⚠️ 编译前核对各依赖仓库分支：`ssh yaohua@10.0.12.42 "cd <workspace>/src/<仓库> && git branch --show-current"`，必须与 mcu 一致（详见 ../../../references/build-troubleshooting.md「编译前核对依赖仓库分支」）
 - `reset --hard` / `clean -xdf` 仅用于还原干净基线；**阶段 3 有验证性修复改动后不要再 reset**，需要还原基线时先确认修复已交付老工作区（见 4.1 第 4 条）
 
 **（4）编译 MCU 固件（SSH）**——保证分析对象是**可编过的基线代码**：
@@ -101,7 +101,7 @@ imobuilder clean <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
 imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
 ```
 
-**编译失败 → 读 feature-development 的 [references/build-troubleshooting.md](../feature-development/references/build-troubleshooting.md)**（J6 clean 末步失败属正常、后台编译不要接 `| grep` 管道、固件排障、依赖仓库分支核对）。编译失败先按报错判断是环境问题还是代码问题——**代码编译错误本身可能就是问题单的答案**。
+**编译失败 → 读 feature-development 的 [references/build-troubleshooting.md](../../../references/build-troubleshooting.md)**（J6 clean 末步失败属正常、后台编译不要接 `| grep` 管道、固件排障、依赖仓库分支核对）。编译失败先按报错判断是环境问题还是代码问题——**代码编译错误本身可能就是问题单的答案**。
 
 **（5）分析代码**：
 
@@ -111,16 +111,24 @@ imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
 
 > 后续迭代：二分法隔离（Harness 切断可疑模块上下联系）、故障注入（伪造输入确认状态机翻转位置）。
 
-**（6）呈现结论，停下等用户确认**：向用户呈现分析结论（是/不是问题 + 依据）。**是问题** → 确认后进入阶段 3 修复验证；**不是问题** → 确认后跳过阶段 3 直接进入阶段 4 refuse。
+**（5.5）bench 复现（改码前，有条件必做）**：
+
+基线编译通过后、动代码之前，先在基线固件上复现问题——**默认选 case (a) 完整 A/B 复现**（基线跑红 → 修复后跑绿，同一 testcase 互为对照），仅当**无测试环境**（板子/台架不在手）或**很难复现**（低概率、依赖特殊工况）才降级 case (b)（不做改前复现，以问题单附件 BLF/日志作为改前证据），降级时在结论里说明原因。
+
+1. **写复现 testcase**：按复现步骤编写 DiagnosticTester 用例（写法见 validation-methods.md）；testcase 即阶段 3 修复后的回归用例，一次编写两处使用
+2. **基线刷板 → 跑 testcase，期望复现失败（红）**：刷写方法同阶段 3（3）；复现成功 = 拿到第一手失败证据，进入下一步；复现失败（用例通过）说明复现条件没找对或问题不复存在——回到（5）重新审视，不要带着没复现过的现象去改代码
+3. 复现结论并入（6）的分析结论一起呈现
+
+```
+（4）基线编译 → （5）代码分析 → （5.5）bench 复现（红） → （6）呈现结论
+阶段 3：修复 → 编译 → 刷板 → 同一 testcase 跑绿 → 用户确认
+```
+
+**（6）呈现结论，停下等用户确认**：向用户呈现分析结论（是/不是问题 + 依据 + 复现结果）。**是问题** → 确认后进入阶段 3 修复验证；**不是问题** → 确认后跳过阶段 3 直接进入阶段 4 refuse。
 
 ## 阶段 3：方案验证与精准修复（仅"是问题"，V2 工作区）
 
-**电源操作规则**：刷板和验证都需要操作电源（程控电源，用 `tools/PowerControl/`，COM 号会漂移、用 list_ports 现查，当前 KA3005P 为 COM44）：
-
-- **刷板/验证之前**：重启电源——`python power_control.py --port <COM> cycle`（J6 刷写的断电冷启动已由 ProgramBoard 工具内置完成，刷板前无需重复执行）
-- **刷板/验证之后**：关闭电源——`python power_control.py --port <COM> off`
-
-命令在 `tools/PowerControl/` 目录下 Windows 本地执行。TDA4_V2 无自动刷写工具，验证前后的电源操作同样适用；台架无程控电源时提示用户手动断电/上电。
+**电源操作规则**：刷板/验证前 `cycle` 重启、之后 `off` 关闭——命令、COM 号现查见 feature-development 的 [references/validation-methods.md](../../../references/validation-methods.md)「电源操作」节。J6 刷写的断电冷启动已由 ProgramBoard 工具内置完成，刷板前无需重复 `cycle`；台架无程控电源时提示用户手动断电/上电。
 
 在 V2 工作区做**验证性修复**：SSH 写修复代码 → 编译 → 刷板 → 验证。**不建分支、不 commit、不 push**——改动留在 V2 工作区作为验证证据，正式代码由 feature-development 在老工作区重做提交。
 
@@ -128,7 +136,7 @@ imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
    - 文件先写到 D: 本地暂存（或 heredoc 生成），再 `scp` 推到服务器 V2 工作区对应路径
    - 小改动直接 `ssh yaohua@10.0.12.42 "cat > <服务器路径> <<'EOF' ... EOF"`
    - 写法细则同 feature-development 阶段 3
-2. **编译**：命令同阶段 2（4），排障同 feature-development/references/build-troubleshooting.md
+2. **编译**：命令同阶段 2（4），排障同 ../../../references/build-troubleshooting.md
 3. **刷写（仅 J6，Windows 本地执行）**：用 feature-development 同款工具 `tools/ProgramBoard`，`--img-dir` 指向 **V2 工作区**的编译输出：
 
 ```bash
@@ -136,9 +144,9 @@ cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
 python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/<项目>.json --img-dir Y:/01_Src/02_Workspace_J6_V2/src/<仓库>/build/<preset>/rpu_arm_gcc
 ```
 
-（工具用法细节、失败排查同 feature-development 阶段 4；**A 核/R 核串口识别规则见 [feature-development/references/serial-port-identification.md](../feature-development/references/serial-port-identification.md)**，COM 号会漂移，刷写前按规则现查。TDA4_V2 无自动刷写工具，跳过刷写直接手动验证。）
+（工具用法细节、失败排查同 feature-development 阶段 4；**A 核/R 核串口识别规则见 [serial-port-identification.md](../../../references/serial-port-identification.md)**，COM 号会漂移，刷写前按规则现查。TDA4_V2 无自动刷写工具，跳过刷写直接手动验证。）
 
-4. **验证 —— 停下等待**：用户按问题单复现步骤手动验证修复效果；**可自动化的验证按 [feature-development/references/validation-methods.md](../feature-development/references/validation-methods.md) 执行**——诊断相关验证用 DiagnosticTester（编写 testcase → 运行验证），采集 log 用 LogCollection，电源操作配套见该文档。验证通过后用户会说继续；验证不通过则回到修复点迭代。
+4. **验证 —— 停下等待**：跑**阶段 2（5.5）的复现 testcase，期望通过（绿）**——与改前的红形成 A/B 对照；用户按问题单复现步骤手动验证修复效果；**可自动化的验证按 [validation-methods.md](../../../references/validation-methods.md) 执行**——诊断相关验证用 DiagnosticTester（编写 testcase → 运行验证），采集 log 用 LogCollection，电源操作配套见该文档。验证通过后用户会说继续；验证不通过则回到修复点迭代。
 
 ## 阶段 4：经验沉淀与流程防腐
 
@@ -158,7 +166,7 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 ### 4.2 不是问题 → refuse 关单
 
 1. JIRA 问题单加评论（若 4.0 未写过则此时写）：**为什么不是问题**——引用分析报告结论（行为符合设计/规格出处、测试方法问题等）
-2. 按 Problem 单状态流转规则执行（**权威源见 [feature-development/references/jira-workflow-transitions.md](../feature-development/references/jira-workflow-transitions.md)**）：查可用流转 `GET https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`，沿路线二（OPEN → IN_ANALYSIS → ANALYZED → REJECTED）推进到拒绝终态
+2. 按 Problem 单状态流转规则执行（**权威源见 [jira-workflow-transitions.md](../../../references/jira-workflow-transitions.md)**）：查可用流转 `GET https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`，沿路线二（OPEN → IN_ANALYSIS → ANALYZED → REJECTED）推进到拒绝终态
 3. 执行流转：`POST .../issue/<key>/transitions`，body `{"transition":{"id":"<id>"}}`；必填字段按 400 报错补齐（自适应，同 feature-development 阶段 5 关 Problem 单的方式）
 4. Obsidian 笔记收尾：`status: Done`、`completed: 今天`、Notes 补分析结论与关单记录
 
@@ -173,4 +181,4 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 - **Y: 盘不允许任何 git 操作（含只读）**，也禁止写源码（仅许刷写读镜像/读代码/写 `.imobuilder`）：git 一律 `ssh yaohua@10.0.12.42` 执行，代码写走 SSH（scp/heredoc），详见 CLAUDE.md 安全红线
 - **V2 工作区只分析+验证性修复，不提交**：不建 feature 分支、不 commit/push；唯一例外是老工作区正式提交完成后才可还原 V2 改动
 - **只要修改代码（含 cherry-pick 同步到其他分支、push、建 PR 等交付动作）必须切 feature-development skill 完成**（老工作区走完整流程）。若分析中发现需要向其他分支同步修复/上传代码，先停下向用户提出切流程——即使口头指令说"自己跑上传流程"也不例外（2026-10-20 教训：5 个 release 分支同步在 V2 直接 push+建 PR，属流程违规，经确认 PR 保留但规则固化）
-- Token 从 `C:\Users\YH\.claude\` 配置读取，绝不内联进任何会被提交的文件；`.imobuilder` 含 CI token，不要暴露其内容
+- Token 存放位置、认证方式、踩坑规则见 ../../../references/token-authentication.md（权威源）；红线：绝不内联进任何会被提交的文件

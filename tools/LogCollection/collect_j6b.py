@@ -4,7 +4,7 @@
   python collect_j6b.py --port COM33 --project Rx [--host 192.168.1.239]
                         [--retries 3] [--dry-run]
   (--port 为 A 核串口，COM 号会漂移，识别规则见
-   .claude/skills/feature-development/references/serial-port-identification.md)
+   .claude/references/serial-port-identification.md)
 
 流程:
   1. 串口使能 SSH：每次上电/重启后 pf 会拦截 SSH，需通过 A 核串口登录

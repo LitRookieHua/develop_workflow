@@ -45,12 +45,12 @@ description: 需求创建/工作项立项全流程：需求来源（JIRA 需求�
 
 - 文件名英文；**笔记标题（H1）和 JIRA Story summary 也必须英文**，正文内容可中文
 - 路径：`ClaudeCodeNote/Work Database/<英文文件名>.md`
-- **先读模板再写**：从 `ClaudeCodeNote/Templates/` 按项目选择（N60 story template / T51 story template / IDC310 / IDC510 / IDC300 / IDC100 / IFC4 Story Template）
+- **先读模板再写**：从 `ClaudeCodeNote/Templates/` 按项目选择（IDC310GAC / IDC310BAIC / IDC510 / IDC300 / IDC100 / IFC4 Story Template；GAC 系项目统一用 IDC310GAC Story Template，创建参数参考模板单 IDC310GAC-7833）
 - **结构严格跟模板**——章节和 frontmatter 字段一致，不要混用其他模板结构。统一结构：Description / JIRA（含 Customer Variants、Vehicle Variant、Implements_JRQ、Link to Problems 行）/ Details（问题/需求描述+确认修改分支）/ Problem Analysis / Design / Code Changes / Test Result / Attachments / Related Links（没有 Subtasks 和 Notes）
-- JIRA 表必含两行：`Implements_JRQ`（需求来源链接）、`Link to Problems`（问题来源，无则写"无"）；变体字段按项目命名（如 T51 模板的 Customer Variants / Vehicle Variant 两行）
+- JIRA 表必含两行：`Implements_JRQ`（需求来源链接）、`Link to Problems`（问题来源，无则写"无"）；变体字段按项目命名（如 IDC310 模板的 Customer Variants / Vehicle Variant 两行）
 - **修改分支必须确认**：写笔记前确认修改分支（develop / release/... / 多分支）——用户消息里已给就直接用，没给就用 AskUserQuestion 问，Details 的"修改分支"不允许留"待确认"
 - frontmatter 关键字段：`type: Story`、`status: Todo`、`created: 今天`、`jira_key`（暂指向来源单，Stage 3 回写）、`fix_version`、`due_date: 今天+7天`、`variant`、`assignee: Hua Yao / 姚华`
-- **章节内容语义**（T51 模板的标准定义，其他项目模板同理）：
+- **章节内容语义**（IDC310 模板的标准定义，其他项目模板同理）：
   - **Details**：清晰描述问题或需求 + 确认修改分支（如 develop / release/... 分支）
   - **Problem Analysis / Design**：设计思路 / 问题分析流程
   - **Code Changes**：代码改动 + commit（开发阶段补充）
@@ -101,7 +101,7 @@ description: 需求创建/工作项立项全流程：需求来源（JIRA 需求�
 ## JIRA API 速查
 
 - Base：`https://jira.imotion.ai:7070`
-- 认证：`Authorization: Bearer <token>`，token 在 `~/.claude/jira_token.txt`（PAT Bearer；⚠️ Basic auth 会 401）
+- 认证：PAT Bearer，token 位置与踩坑规则见 ../../../references/token-authentication.md（权威源）
 - 常用端点：
   - 详情：`GET /rest/api/2/issue/{key}`
   - changelog：`GET /rest/api/2/issue/{key}?expand=changelog`

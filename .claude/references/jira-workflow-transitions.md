@@ -60,6 +60,13 @@ OPEN（开启/新建）→ IN_PROGRESS（进行中/开发中）→ RESOLVED（�
 | 2 | `31` | In Analysis → Analyzed | `customfield_12017`（英文根因描述）+ `duedate` + `fixVersions` |
 | 3 | `41` | Analyzed → Implemented | `customfield_12305`（Link to Bugfix，easy-links 格式 `[{"key":"<story单号>"}]`，传字符串数组会报 expected Object） |
 
+### Story 单两步流转的 transition id（「开放」态无直接解决流转）
+
+| 步骤 | transition id | 流转 | 必填字段 |
+| --- | --- | --- | --- |
+| 1 | `4` | 开放 → 处理中 | 无 |
+| 2 | `5` | 处理中 → 已解决 | 无（resolution 自动为完成） |
+
 ### 流转 400 报错的排查链（2026-10-20 五张单实测踩坑）
 
 1. **fixVersions 必须传单子所属项目的版本 id**：同名版本在不同项目 id 不同（实例：`T09-Y_G710v6_260915` 在 IDC310GAC 项目是 27818，传成其他项目的 27445 报无效值）。先 `GET /rest/api/2/issue/<key>?fields=fixVersions,versions` 或查项目版本列表拿本单项目的 id

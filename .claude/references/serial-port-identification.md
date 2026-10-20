@@ -30,5 +30,6 @@ COM 号随 USB 重枚举漂移（J6 EVM 的 A 核见过 COM30→COM41→COM33）
 |---|---|---|---|
 | J6 EVM（CH9114） | SERIAL-C（最初 COM30 → COM41 → 当前 COM33） | SERIAL-D（最初 COM27 → 当前 COM32） | N60/T75 等 J6 项目刷写板 |
 | T09 板（普通 USB Serial Port，COM63-66） | COM65（升序第 3 个，2026-10-20 用户实测+刷写验证） | COM66（升序第 4 个） | 诊断 CANFD1(500k/2M) 接 CX ch0 |
+| T68 板（普通 USB Serial Port，COM63-66，与 T09 同板同接线） | COM65（升序第 3 个，2026-10-20 用户实测确认） | COM66（升序第 4 个） | 诊断 CANFD1(500k/2M) 接 CX ch0 |
 
 （2026-10-19 由用户提供权威规则，替代此前"抓上电 banner 分类"的临时识别法）
