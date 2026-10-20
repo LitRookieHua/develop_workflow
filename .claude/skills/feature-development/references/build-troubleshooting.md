@@ -35,7 +35,7 @@ ssh yaohua@10.0.12.42 "cd <workspace>/src/<依赖仓库> && git branch --show-cu
   1. 清空 download 目录内容：TDA4 为 workspace 下 `output/armv7-r-generic-tda4-r5f-llvm/release/download`；J6 为 `output/armv8-r-generic-gcc-r52/release/download`
   2. `imobuilder configure --ci_service_token 'Bearer <jwt>'`（⚠️ Bearer 和 token 之间必须有空格，拼成 `BearereyJ...` 或裸 JWT 都会 401；jwt 取自 `.imobuilder` 里的 CI token，不要暴露）
   3. `imobuilder remote_build parking_dr` 和 `imobuilder remote_build uper_app`，各返回一个 build_id
-  4. 等构建完成（约 10 分钟）后 `imobuilder download target-<build_id> --build_id <build_id>` 下载两个固件
+  4. **轮询构建状态：3 次、每次间隔 5 分钟**（`GET https://ci.imotion.ai/api/v1/build-tasks/<build_id>`，认证 `Authorization: <.imobuilder 里的 CI token>`，看 `data.build_task_state`）。**state==7 才继续**下载：`imobuilder download target-<build_id> --build_id <build_id>`；3 次后仍未到 7（或 state 表示失败）则停下向用户报告，不要盲目下载。state 枚举无公开文档，实测：3=构建进行中，7=构建成功结束（`end_at` 已填充且 `errors` 为空可佐证）
 - **遇到 MCU21 固件的问题 → 重新编译 MCU21 固件**（uss_app_tda4 仓库，⚠️ 先确认该仓库在正确分支，残留旧分支会 API 不匹配编不过）：
 
 ```bash

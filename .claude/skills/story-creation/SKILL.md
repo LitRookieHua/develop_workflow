@@ -30,7 +30,7 @@ description: 需求创建/工作项立项全流程：需求来源（JIRA 需求�
 
 同样拉详情，作为笔记 JIRA 表 `Link to Problems` 行和 Story 关联的来源。
 
-- 问题单 description 里的**测试流程（复现步骤）与测试现象**必须原样同步到笔记 Details——这是后续问题分析和验证的依据，不能只写概括；description 为空时查评论
+- **复现步骤与测试现象在 Problem Description 字段（`customfield_12007`），标准 description 常为空**——原样同步到笔记 Details，这是后续问题分析和验证的依据，不能只写概括；该字段也为空时查评论（完整规则见 problem-analysis skill 阶段 1）
 
 ### 来源 C：手动输入需求
 
@@ -101,7 +101,7 @@ description: 需求创建/工作项立项全流程：需求来源（JIRA 需求�
 ## JIRA API 速查
 
 - Base：`https://jira.imotion.ai:7070`
-- 认证：`Authorization: Bearer <token>`，token 在 `~/.claude/.mcp.json` → `mcpServers.atlassian.env.JIRA_API_TOKEN`
+- 认证：`Authorization: Bearer <token>`，token 在 `~/.claude/jira_token.txt`（PAT Bearer；⚠️ Basic auth 会 401）
 - 常用端点：
   - 详情：`GET /rest/api/2/issue/{key}`
   - changelog：`GET /rest/api/2/issue/{key}?expand=changelog`

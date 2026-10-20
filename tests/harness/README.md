@@ -27,6 +27,7 @@
 
 - collect_mcu_log 需板子在线（A 核串口 + 板子 SSH 可达）；流程：串口 pfctl -d 使能 SSH → SFTP 拉 /log/mcu，落盘 `tools/LogCollection/logs/<项目>/mcu_<时间戳>/`
 - capture_com68 落盘 `mcu_log/logs/com68_capture.log`，Ctrl-C 停止；配套 ECU 插桩（如 `uart_mcu10_printf_v`）做问题取证
+- **A 核/R 核串口 COM 号按规则现查（COM 号会漂移）**：规则权威源 `.claude/skills/feature-development/references/serial-port-identification.md`
 
 ## dcm_sec_relock_1003/ — D3ACYI-1832：10 03 会话重入安全重锁压测（V2XEU）
 

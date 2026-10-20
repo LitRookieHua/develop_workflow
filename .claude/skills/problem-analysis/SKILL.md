@@ -26,8 +26,9 @@ description: JIRA 问题单分析与修复工作流（4 阶段：现场捕获与
 
 **拉问题单详情**——用 JIRA REST API（认证与端点见 story-creation skill 的「JIRA API 速查」，PAT Bearer）：
 
-- `GET https://jira.imotion.ai:7070/rest/api/2/issue/<问题单号>?fields=summary,description,status,fixVersions,components,assignee,reporter,issuelinks,attachment,customfield_15000`
-- description 里的**复现步骤与测试现象原样保存**——这是后续分析和结论的依据，不能只写概括；description 为空时查评论（`GET .../issue/<key>/comment`）
+- `GET https://jira.imotion.ai:7070/rest/api/2/issue/<问题单号>?fields=summary,description,status,fixVersions,components,assignee,reporter,issuelinks,attachment,customfield_15000,customfield_12007,customfield_12006`
+- **问题描述（复现步骤）在自定义字段 Problem Description = `customfield_12007`**——问题单的问题描述都放在该属性中，标准 description 字段经常为空；相邻有用字段：`customfield_12006` Problem Type、`customfield_12017` Root Cause Analysis。字段 id 可用 `?expand=names` 查全量字段名
+- Problem Description 里的**复现步骤与测试现象原样保存**——这是后续分析和结论的依据，不能只写概括；该字段也为空时查评论（`GET .../issue/<key>/comment`）
 - 有附件则下载留存（分析时看）
 - 记录 fixVersions、变体字段（customfield_15000）、components——阶段 2 推断项目用
 
@@ -135,9 +136,9 @@ cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
 python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/<项目>.json --img-dir Y:/01_Src/02_Workspace_J6_V2/src/<仓库>/build/<preset>/rpu_arm_gcc
 ```
 
-（工具用法细节、COM 口识别、失败排查同 feature-development 阶段 4。TDA4_V2 无自动刷写工具，跳过刷写直接手动验证。）
+（工具用法细节、失败排查同 feature-development 阶段 4；**A 核/R 核串口识别规则见 [feature-development/references/serial-port-identification.md](../feature-development/references/serial-port-identification.md)**，COM 号会漂移，刷写前按规则现查。TDA4_V2 无自动刷写工具，跳过刷写直接手动验证。）
 
-4. **验证 —— 停下等待**：用户按问题单复现步骤手动验证修复效果。验证通过后用户会说继续；验证不通过则回到修复点迭代。
+4. **验证 —— 停下等待**：用户按问题单复现步骤手动验证修复效果；**可自动化的验证按 [feature-development/references/validation-methods.md](../feature-development/references/validation-methods.md) 执行**——诊断相关验证用 DiagnosticTester（编写 testcase → 运行验证），采集 log 用 LogCollection，电源操作配套见该文档。验证通过后用户会说继续；验证不通过则回到修复点迭代。
 
 ## 阶段 4：经验沉淀与流程防腐
 
@@ -157,9 +158,13 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 ### 4.2 不是问题 → refuse 关单
 
 1. JIRA 问题单加评论（若 4.0 未写过则此时写）：**为什么不是问题**——引用分析报告结论（行为符合设计/规格出处、测试方法问题等）
-2. 查可用流转：`GET https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`，选 refuse/拒绝类流转（名称或目标状态含 refuse/拒绝/Declined 之类）
+2. 按 Problem 单状态流转规则执行（**权威源见 [feature-development/references/jira-workflow-transitions.md](../feature-development/references/jira-workflow-transitions.md)**）：查可用流转 `GET https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`，沿路线二（OPEN → IN_ANALYSIS → ANALYZED → REJECTED）推进到拒绝终态
 3. 执行流转：`POST .../issue/<key>/transitions`，body `{"transition":{"id":"<id>"}}`；必填字段按 400 报错补齐（自适应，同 feature-development 阶段 5 关 Problem 单的方式）
 4. Obsidian 笔记收尾：`status: Done`、`completed: 今天`、Notes 补分析结论与关单记录
+
+### 4.3 是问题 → 沿路线一推进状态（问题成立、修复已落地）
+
+修复 PR 已建/已合入后，问题单沿路线一推进：`OPEN → IN_ANALYSIS → ANALYZED → IMPLEMENTED`（流转规则权威源同 4.2 指向的 jira-workflow-transitions.md）。推进到哪一步（ANALYZED 停住等测试回归，还是直接 IMPLEMENTED）先经用户确认；RESOLVED 由测试侧回归后关，不替测试关单。
 
 ## ⚠️ 关键规则
 
@@ -167,4 +172,5 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 
 - **Y: 盘不允许任何 git 操作（含只读）**，也禁止写源码（仅许刷写读镜像/读代码/写 `.imobuilder`）：git 一律 `ssh yaohua@10.0.12.42` 执行，代码写走 SSH（scp/heredoc），详见 CLAUDE.md 安全红线
 - **V2 工作区只分析+验证性修复，不提交**：不建 feature 分支、不 commit/push；唯一例外是老工作区正式提交完成后才可还原 V2 改动
+- **只要修改代码（含 cherry-pick 同步到其他分支、push、建 PR 等交付动作）必须切 feature-development skill 完成**（老工作区走完整流程）。若分析中发现需要向其他分支同步修复/上传代码，先停下向用户提出切流程——即使口头指令说"自己跑上传流程"也不例外（2026-10-20 教训：5 个 release 分支同步在 V2 直接 push+建 PR，属流程违规，经确认 PR 保留但规则固化）
 - Token 从 `C:\Users\YH\.claude\` 配置读取，绝不内联进任何会被提交的文件；`.imobuilder` 含 CI token，不要暴露其内容

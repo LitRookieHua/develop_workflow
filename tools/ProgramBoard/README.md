@@ -8,23 +8,27 @@
 
 | 设备 | 连接 | 说明 |
 |---|---|---|
-| 刷写板 | A 核串口 → PC（当前 N60 EVM 为 **COM30** / SERIAL-C） | 921600，R 核是 COM27 / SERIAL-D |
+| 刷写板 | A 核串口 → PC（识别规则见下节链接） | 波特率 J6 921600 / TDA4 115200 |
 | 刷写板 | 网线 → PC 同网段 | fastboot 走 UDP |
-| KORAD KA3005P | USB → PC（当前为 **COM44**） | 可选；不接则失败时提示人工断电 |
+| KORAD KA3005P | USB → PC（当前为 **COM44**，`power_control.py --port <COM> id` 能应答即确认） | 可选；不接则失败时提示人工断电 |
 | 刷写板 | 供电接 KA3005P 输出（12V） | 自动断电重试依赖此项 |
 
 软件：Python 3.12+、pyserial、Git Bash（fastboot 在其 PATH 中，当前为 `hobot_tools/platform-tools_r30.0.5-windows`）。
+
+## A 核 / R 核串口识别
+
+**识别规则的唯一权威源：[`.claude/skills/feature-development/references/serial-port-identification.md`](../../.claude/skills/feature-development/references/serial-port-identification.md)**——J6（全 921600）：CH9114 四口 SERIAL-C=A 核 / SERIAL-D=R 核，普通 USB Serial Port 按 COM 号升序第 3/4 个；TDA4（全 115200）：两组各 4 个连续串口，A 核组第 1 个、R 核组第 2 个。COM 号随 USB 重枚举漂移，换板后按规则重新判定，本 README 不重复维护规则内容。
 
 ## 使用
 
 ```bash
 cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
 
-# 日常刷写（接电源）
-python ProgramBoard_j6b.py --port COM30 --psu-com COM44
+# 日常刷写（接电源；--port 为 A 核串口，按识别规则现查，示例 COM33 = J6 EVM SERIAL-C）
+python ProgramBoard_j6b.py --port COM33 --psu-com COM44
 
 # 不接电源（失败时提示人工断电，回车继续）
-python ProgramBoard_j6b.py --port COM30
+python ProgramBoard_j6b.py --port COM33
 ```
 
 流程：断电冷启动(3s) → 20ms 周期发空格打断 uboot → `fastboot udp` → 解析板子 IP → `oem interface:mtd` → `flash MCU_a` → `flash MCU_b` → `fastboot reboot`。任一步失败自动断电重来，默认重试 3 次。退出码：0 成功 / 1 失败。
@@ -81,13 +85,14 @@ python ProgramBoard_j6b.py --port COM30
 cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
 
 # 日常（板子已上电在线）
-python ota_j6b.py --port COM30
+# 日常（板子已上电在线；--port 为 A 核串口，按识别规则现查）
+python ota_j6b.py --port COM33
 
 # 冷启动后完整流程（接电源）
-python ota_j6b.py --port COM30 --psu-com COM44
+python ota_j6b.py --port COM33 --psu-com COM44
 
 # 指定包路径（缺省取 ota_package/ 下最新 zip）
-python ota_j6b.py --port COM30 --ota path/to/xxx.zip
+python ota_j6b.py --port COM33 --ota path/to/xxx.zip
 ```
 
 流程：断电冷启动(3s) → **串口使能 SSH**（见下）→ 删除 `/ota` 旧包 → SFTP 原名上传整包（**不重命名**）→ **大小+MD5 校验** → `ota_tool -g` 记录当前槽位 → `. /etc/profile && cd /ota && ota_tool -p` 原名安装，等待 `[OTA SUCCESSFULL]` → 板子自动重启 → 等 60s → **串口使能 SSH** → `ota_tool -g` 确认槽位翻转（A→B / B→A）才算成功。任一步失败自动重来，默认重试 3 次。
@@ -96,7 +101,7 @@ python ota_j6b.py --port COM30 --ota path/to/xxx.zip
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--port` | （必填） | A 核串口 COM 号（N60 EVM 为 COM30 / SERIAL-C），上电/重启后串口登录执行 `pfctl -d` 使能 SSH |
+| `--port` | （必填） | A 核串口 COM 号（识别规则见上文「A 核 / R 核串口识别」），上电/重启后串口登录执行 `pfctl -d` 使能 SSH |
 | `--ota` | ota_package/ 最新 zip | OTA 整包本地路径 |
 | `--psu-com` | 无 | 电源串口 COM 号（不填则假定板子已上电启动） |
 | `--psu-type` | `korad` | 电源类型（见 `../PowerControl/`） |

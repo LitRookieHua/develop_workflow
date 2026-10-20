@@ -8,7 +8,7 @@
   - 原因 1：`Y:\01_Src` 是服务器 10.0.12.42（`/comp/user_data/yaohua/01_Src`）的网络映射，本地 git `core.autocrlf=true` 会把工作区文件改写成 CRLF 污染服务器仓库（曾实际污染 3432 个文件）
   - 原因 2：Y: 映射不保留文件执行位，经 Y: 写文件会把 mode 644→755 带进 commit（2026-10-19 J02 DoIP 实际发生）
 - **Token 安全**：JIRA/Bitbucket token 从 `C:\Users\YH\.claude\` 下配置读取，绝不内联进任何会被提交的文件；`.imobuilder` 含 CI token，不要暴露其内容
-- **commit 格式**（MCU 仓库，全局规则）：`feat(模块名): [工单号] 项目名 + 描述`
+- **commit 格式**（MCU 仓库，全局规则）：`feat(模块名): [工单号] 项目名 + 描述`，**commit 内容必须全部英文**——完整规则见 [git-rules.md](.claude/skills/feature-development/references/git-rules.md)（权威源）
 
 ## 路径角色
 

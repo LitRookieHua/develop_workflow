@@ -156,7 +156,7 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 - J02（v2 仓库）：`--config configs/j02_mcu.json --img-dir Y:/01_Src/02_Workspace_J6/src/mcu_app_j6_v2/build/cpj_fawvw_j02_d310/rpu_arm_gcc`（镜像文件 `int_rpu_arm8r5_arm_j02_gnu.img`）
 
 - ⚠️ **`--img-dir` 必须显式传**：工具已从 `Y:\01_Src\tools\flash`（已删除）迁至 D 盘，脚本内置默认镜像路径指向 D 盘本地副本（无 build 产物），不传会找不到镜像；`--img-dir` 一律指向 Y: 盘上阶段 3 的服务器编译输出
-- A 核串口按 `USB-Enhanced-SERIAL-C` 描述识别（COM 号会因 USB 重枚举漂移，如 COM30/COM41，用 list_ports 查当前号），COM44 = KA3005P 电源；电源未接时省略 `--psu-com`（失败时提示人工断电）
+- A 核串口识别——**规则权威源 [references/serial-port-identification.md](references/serial-port-identification.md)**（J6/TDA4 判定规则 + 现场快查步骤 + 实测映射表）。COM 号随 USB 重枚举漂移，换板后必须按权威源重新判定；COM44 = KA3005P 电源（`power_control.py id` 可应答验证）；电源未接时省略 `--psu-com`（失败时提示人工断电）
 - 全自动流程（约 35 秒/次）：断电冷启动 → 20ms 周期发空格打断 uboot → `fastboot udp` → `flash MCU_a`/`MCU_b` → `fastboot reboot`；任一步失败自动断电重来（默认重试 3 次），退出码 0 成功 / 1 失败
 - 前提：板子 A 核串口 + 网线（与 PC 同网段）已接，供电走 KA3005P 输出（12V）
 - 失败排查看 `logs/flash_*.log`（`[SER]` 前缀为串口原始数据）；换新板/新 uboot 版本先跑 `--dry-run` 校准，参数与板子特性详见目录下 `README.md`
@@ -164,7 +164,7 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 
 **手动验证 —— 停下等待**：用户手动验证（台架/功能验证）。验证通过后用户会说继续。
 
-诊断功能验证用 `tools/DiagnosticTester`：自己写 testcase（`testcase/<项目>/<用例>/<用例>.yaml`，写法见该目录 README.md），然后跑脚本验证：
+**验证方法统一入口：[references/validation-methods.md](references/validation-methods.md)**——诊断相关验证用 `tools/DiagnosticTester` 自动执行（1. 编写 testcase → 2. 运行验证）；采集 log 用 `tools/LogCollection`；电源操作配套见该文档。后续新增验证方法一律补充到该文档，其他地方只指向它。
 
 ```bash
 python DiagnosticTester.py run testcase/<项目>/<用例>/<用例>.yaml --config configs/<项目>/<配置>.yaml
@@ -186,7 +186,7 @@ git commit -m "feat(模块名): [工单号] 项目名 + 描述"
 git push
 ```
 
-commit 格式（全局规则，所有仓库）：`feat(模块名): [工单号] 项目名 + 描述`，如 `feat(dia_cfg): [D3ACYI-1271] V2x add F187 part number to MCU system info IPC`。注意：给参考示例时只套用格式，内容如实描述本次改动。
+commit 格式（全局规则，所有仓库）：`feat(模块名): [工单号] 项目名 + 描述`，如 `feat(dia_cfg): [D3ACYI-1271] V2x add F187 part number to MCU system info IPC`。**commit 内容必须全部使用英文**（title 和 body）。完整规则（含安全红线）见 [references/git-rules.md](references/git-rules.md)——其他地方查 git/commit 规则时一律指向该文档。注意：给参考示例时只套用格式，内容如实描述本次改动。
 
 push 后记下 commit hash（总结笔记要用）。
 
@@ -217,6 +217,7 @@ push 后记下 commit hash（总结笔记要用）。
 2. **JIRA 转已解决**：「开放」状态没有直接的解决流转，需两步 POST `https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`（认证见 story-creation「JIRA API 速查」，⚠️ 必须 PAT Bearer 方式，Basic auth 会 401）：
    - `{"transition":{"id":"4"}}` → 开始进行（开放 → 处理中）
    - `{"transition":{"id":"5"}}` → 解决问题（处理中 → 已解决，resolution 自动为完成）
+   - 状态机全貌（Problem/Story 两条主干、Reopen 机制）见 [references/jira-workflow-transitions.md](references/jira-workflow-transitions.md)——其他地方查流转时一律指向该文档
 3. **关闭关联需求单/问题单**（2026-09-21 用户要求，漏关即收尾未完成）：除 story 外，笔记 frontmatter `parent_problems` / `parent_requirements` 及来源需求中列出的关联单都要一并关闭：
    - **Problem 单**（issuetype=Problem）三步流转，各步带必填字段：
      - `{"transition":{"id":"121"}}` → 开始分析（开放 → In Analysis）
