@@ -2,6 +2,8 @@
 
 创建 JIRA Story 前按项目核对本表。来源：历史验证结论（项目记忆）。字段选项可能随 JIRA 配置变化，创建失败时先看 400 报错内容，通常是必填字段缺失或格式错误（数组 vs 单对象）。
 
+**JIRA 创建参数的权威源是 `.claude/references/jira-story-params.json`**（已配 IDC310GAC，其他项目逐步迁入）；本表聚焦各项目的笔记模板与历史踩坑知识，JIRA 字段参数以配置文件为准。
+
 通用 Story 必填（所有项目）：project、summary、issuetype (Story=10001)、description、components、fixVersions、duedate。
 
 ---
@@ -28,11 +30,8 @@
 ## IDC310GAC（广汽 iDC310 — Execution，J6B 需求落地项目）
 
 - J6BREQ / IR 广丰需求单的 Story 落在本项目（如 J6BREQ-12817 → IDC310GAC-7252）
-- **笔记模板**：`Templates/IDC310GAC Story Template.md`（统一；**创建参数参考模板单 [IDC310GAC-7833](https://jira.imotion.ai:7070/browse/IDC310GAC-7833)**：fixVersion `AY7_G020v1_251015`、components `Diagnostic`，2026-10-20 用户确认）
-- **Variant**：cf_15000 数组（如 `[{"value": "GAC AY7"}]`/`[{"value": "GAC T68"}]`，按问题单/需求单实际变体填）；cf_12025 不用
-- **fixVersion**：`T75-G1_S.F00`、`T75_G270_S.010_260908` 等 T75 系列；需求单上的 `T75_1016` 等平台版本号在本项目不存在，需换算
-- **components**：MCU（mcu 侧 Story 参考 IDC310GAC-7008）
-- **需求链接**：type `implemented`，outwardIssue=需求单，inwardIssue=Story
+- **笔记模板**：`Templates/IDC310GAC Story Template.md`（统一；**创建参数参考模板单 [IDC310GAC-7833](https://jira.imotion.ai:7070/browse/IDC310GAC-7833)**，2026-10-20 用户确认）
+- **JIRA 创建参数**（Variant / fixVersion 换算 / components / 链接方向）：一律查 `.claude/references/jira-story-params.json` 的 IDC310GAC 节（权威源）
 - cf_15000 在 JQL 中不可用 `cf_15000 =`，用 `"Vehicle Variant" = "GAC T75-G1"`
 
 ## IDC510（Smartxtruck — iDC510_Platform_Dev）

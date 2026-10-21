@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "description": "JIRA Story 创建参数配置（按项目分节）。权威源配套文档：.claude/references/jira-operation.md。新增项目时在顶层加一个项目 key 节，字段含义见配套文档第 1 节。",
+    "updated": "2026-10-21"
+  },
+  "IDC310GAC": {
+    "project": {"key": "IDC310GAC"},
+    "issuetype": {"id": "10001"},
+    "fields_required": {
+      "summary": "英文标题（笔记 H1 同名）",
+      "description": "正文",
+      "components": [{"name": "Diagnostic"}],
+      "fixVersions_note": "项目内版本名，如 AY7_G020v1_251015 / T75-G1_S.F00；需求单上的平台版本号（如 T75_1016）在本项目不存在，需换算",
+      "duedate_rule": "创建日 + 7 天",
+      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"GAC AY7\"}]", "[{\"value\": \"GAC T68\"}]"], "note": "按问题单/需求单实际变体填"},
+      "assignee": {"name": "Hua.Yao"}
+    },
+    "issuelinks": {
+      "Implements_JRQ": {"type": "implemented", "outwardIssue": "需求单", "inwardIssue": "新 Story", "required": false},
+      "Link_to_Problems": {"type": "is solved by", "direction": "问题单 is solved by 新 Story", "required": false}
+    },
+    "reference_ticket": "IDC310GAC-7833（模板单：fixVersion AY7_G020v1_251015、components Diagnostic）"
+  }
+}

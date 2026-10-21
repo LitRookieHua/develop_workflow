@@ -8,7 +8,7 @@ Token 存放位置、认证方式、踩坑规则（权威源）。安全底线�
 - **认证方式**：`Authorization: Bearer <PAT>`——⚠️ **Basic auth 会 401**，只能 PAT Bearer
 - **读取**：`TOKEN=$(cat ~/.claude/jira_token.txt | tr -d '\r\n')`（Windows 文件务必剥 `\r\n`，否则 401）
 - **常用端点**：`GET/POST /rest/api/2/issue/{key}`、`.../transitions`、`/comment`、`GET /rest/api/2/project/<KEY>/versions`
-- 状态流转规则见 [jira-workflow-transitions.md](jira-workflow-transitions.md)
+- 状态流转规则见 [jira-operation.md](jira-operation.md)
 
 ## CI（ci.imotion.ai）
 

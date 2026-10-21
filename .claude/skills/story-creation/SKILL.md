@@ -72,16 +72,7 @@ description: 需求创建/工作项立项全流程：需求来源（JIRA 需求�
 
 ### 项目必填字段
 
-每个项目的 Variant 字段、fixVersion 系列、链接方式都不同，**创建前必须查 [references/projects.md](references/projects.md)**。通用必填（所有项目 Story）：project、summary、issuetype、description、components、fixVersions、duedate。
-
-### 创建步骤
-
-1. payload 写入临时 JSON 文件——中文内容必须用 `--data-binary @file.json`，直接 `-d` 会报 Invalid UTF-8 start byte
-2. `POST /rest/api/2/issue` 创建，记下返回的 key
-3. 创建关联链接 `POST /rest/api/2/issueLink`：
-   - 需求单：type `implemented`，`outwardIssue`=需求单，`inwardIssue`=新 Story
-   - 问题单：type `is solved by`（方向等细节见 projects.md）
-4. 删除临时文件
+**JIRA 创建参数一律查 `.claude/references/jira-story-params.json`**（权威源，按项目分节；已配 IDC310GAC，其他项目后续补充）；笔记模板与项目历史踩坑知识查 [references/projects.md](references/projects.md)。创建规则全文（通用必填、payload 陷阱、创建步骤）见 `.claude/references/jira-operation.md` 第 1 节（权威源）。
 
 ---
 
@@ -102,20 +93,19 @@ description: 需求创建/工作项立项全流程：需求来源（JIRA 需求�
 
 - Base：`https://jira.imotion.ai:7070`
 - 认证：PAT Bearer，token 位置与踩坑规则见 ../../../references/token-authentication.md（权威源）
-- 常用端点：
+- **创建单/状态流转规则**：见 ../../../references/jira-operation.md（权威源，含 jira-story-params.json 参数配置）
+- 本 skill 常用端点：
   - 详情：`GET /rest/api/2/issue/{key}`
   - changelog：`GET /rest/api/2/issue/{key}?expand=changelog`
   - 附件列表：`GET /rest/api/2/issue/{key}?fields=attachment`（取 `content` URL 下载）
-  - 创建：`POST /rest/api/2/issue`
-  - 链接：`POST /rest/api/2/issueLink`
 - Story issue type id = `10001`；JQL/字段里 issuetype、status 用 id 或英文名，中文值会被拒
 
 ### Windows bash 陷阱
 
 - 中文 JSON payload：`--data-binary @file.json`（不能 `-d` 内联）
-- Windows python 看不到 git bash 的 `/tmp`——解析临时 JSON 用 `cat file | python -c` 或把文件放在项目目录
+- Windows python 看不到 git bash 的 `/tmp`——解析临时 JSON 用 `cat file | python -c` 或把文件放 `.tmp/`
 - python 打印中文：前置 `PYTHONIOENCODING=utf-8`
 
 ### 遇到新项目约束时
 
-创建失败（HTTP 400 "xxx是必需的"）通常是项目特有必填字段，把解决后的结论更新到 [references/projects.md](references/projects.md)，并考虑存入项目记忆。
+创建失败（HTTP 400 "xxx是必需的"）通常是项目特有必填字段，把解决后的 JIRA 参数更新到 `.claude/references/jira-story-params.json` 对应项目节（权威源），笔记模板等非 JIRA 知识更新到 [references/projects.md](references/projects.md)，并考虑存入项目记忆。

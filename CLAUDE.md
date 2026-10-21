@@ -9,7 +9,7 @@
   - 原因 2：Y: 映射不保留文件执行位，经 Y: 写文件会把 mode 644→755 带进 commit（2026-10-19 J02 DoIP 实际发生）
 - **令牌安全与认证**：token 只从 `C:\Users\YH\.claude\` 下配置读取，绝不内联进任何会被提交的文件；`.imobuilder` 含 CI token，不要暴露其内容。CI / JIRA / Bitbucket 的 token 存放位置、认证方式（Bearer 前缀拼接、`\r\n` 剥离等踩坑）一律先查 [token-authentication.md](.claude/references/token-authentication.md)（权威源）
 - **commit 格式**（MCU 仓库，全局规则）：`feat(模块名): [工单号] 项目名 + 描述`，**commit 内容必须全部英文**——完整规则见 [git-rules.md](.claude/references/git-rules.md)（权威源）
-- **JIRA 状态流转**：流转路线、transition id、必填字段、400 排错链一律先查 [jira-workflow-transitions.md](.claude/references/jira-workflow-transitions.md)（权威源），不要凭记忆猜 transition id；API 实测值与该文档冲突时以文档为准并及时更新文档
+- **JIRA 状态流转**：流转路线、transition id、必填字段、400 排错链一律先查 [jira-operation.md](.claude/references/jira-operation.md)（权威源：创建参数配置 jira-story-params.json + 状态流转），不要凭记忆猜 transition id；API 实测值与该文档冲突时以文档为准并及时更新文档
 - **AUTOSAR 生成代码**：`cpj_*/autosar/` 下源码的人工修改规则（patch 标记防生成覆盖等）一律先查 [autosar-code-generation.md](.claude/skills/feature-development/references/autosar-code-generation.md)（权威源，名称：autosar 代码生成规格；patch 规则是其中一个章节）
 
 ## 路径角色

@@ -209,8 +209,8 @@ push 后记下 commit hash（总结笔记要用）。
 **关闭 JIRA 单和笔记（PR 合并后自动执行，无需用户确认）**。PR 监控确认全部 PR 已合并后执行；PR 尚未全部合并时不要做这步：
 
 1. **确认合并**：`GET .../pull-requests/<id>`，state == `MERGED`
-2. **JIRA 转已解决**：「开放」状态没有直接的解决流转，需两步 POST `https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`（认证见 [references/token-authentication.md](../../references/token-authentication.md)）。transition id 与必填字段一律查 [references/jira-workflow-transitions.md](../../references/jira-workflow-transitions.md)（权威源：Story 两步流转、Problem 三步流转、Reopen 机制、400 排错链）
-3. **关闭关联需求单/问题单**（2026-09-21 用户要求，漏关即收尾未完成）：除 story 外，笔记 frontmatter `parent_problems` / `parent_requirements` 及来源需求中列出的关联单都要一并关闭（流转 id 与必填字段同查 jira-workflow-transitions.md）：
+2. **JIRA 转已解决**：「开放」状态没有直接的解决流转，需两步 POST `https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`（认证见 [references/token-authentication.md](../../references/token-authentication.md)）。transition id 与必填字段一律查 [references/jira-operation.md](../../references/jira-operation.md)（权威源：Story 两步流转、Problem 三步流转、Reopen 机制、400 排错链）
+3. **关闭关联需求单/问题单**（2026-09-21 用户要求，漏关即收尾未完成）：除 story 外，笔记 frontmatter `parent_problems` / `parent_requirements` 及来源需求中列出的关联单都要一并关闭（流转 id 与必填字段同查 jira-operation.md）：
    - **Problem 单**（issuetype=Problem）三步流转推进到 IMPLEMENTED
    - **需求单（Requirement 等）**：查看其可用 transitions（`GET .../issue/<key>/transitions`）选合适的关闭流转，有必填字段按报错补齐
 4. **关闭笔记**：`status: Done`、填写 `completed` 日期、勾选关闭 Subtask、Notes 补关闭记录（PR 合并日期）

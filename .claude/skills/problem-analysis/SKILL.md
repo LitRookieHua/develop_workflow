@@ -166,13 +166,13 @@ python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/
 ### 4.2 不是问题 → refuse 关单
 
 1. JIRA 问题单加评论（若 4.0 未写过则此时写）：**为什么不是问题**——引用分析报告结论（行为符合设计/规格出处、测试方法问题等）
-2. 按 Problem 单状态流转规则执行（**权威源见 [jira-workflow-transitions.md](../../../references/jira-workflow-transitions.md)**）：查可用流转 `GET https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`，沿路线二（OPEN → IN_ANALYSIS → ANALYZED → REJECTED）推进到拒绝终态
+2. 按 Problem 单状态流转规则执行（**权威源见 [jira-operation.md](../../../references/jira-operation.md)**）：查可用流转 `GET https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`，沿路线二（OPEN → IN_ANALYSIS → ANALYZED → REJECTED）推进到拒绝终态
 3. 执行流转：`POST .../issue/<key>/transitions`，body `{"transition":{"id":"<id>"}}`；必填字段按 400 报错补齐（自适应，同 feature-development 阶段 5 关 Problem 单的方式）
 4. Obsidian 笔记收尾：`status: Done`、`completed: 今天`、Notes 补分析结论与关单记录
 
 ### 4.3 是问题 → 沿路线一推进状态（问题成立、修复已落地）
 
-修复 PR 已建/已合入后，问题单沿路线一推进：`OPEN → IN_ANALYSIS → ANALYZED → IMPLEMENTED`（流转规则权威源同 4.2 指向的 jira-workflow-transitions.md）。推进到哪一步（ANALYZED 停住等测试回归，还是直接 IMPLEMENTED）先经用户确认；RESOLVED 由测试侧回归后关，不替测试关单。
+修复 PR 已建/已合入后，问题单沿路线一推进：`OPEN → IN_ANALYSIS → ANALYZED → IMPLEMENTED`（流转规则权威源同 4.2 指向的 jira-operation.md）。推进到哪一步（ANALYZED 停住等测试回归，还是直接 IMPLEMENTED）先经用户确认；RESOLVED 由测试侧回归后关，不替测试关单。
 
 ## ⚠️ 关键规则
 
