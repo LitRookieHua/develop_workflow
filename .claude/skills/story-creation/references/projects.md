@@ -8,7 +8,7 @@
 
 ## IDC310BAIC（北汽 iDC310 — Execution）
 
-- **笔记模板**：`Templates/N60 story template.md`（统一结构见 SKILL.md Stage 1）
+- **笔记模板**：`Templates/IDC310BAIC story template.md`（原 N60 story template，2026-10-20 更名）
 - **Variant**：customfield_15000，必须**数组**格式 `[{"value": "BAIC N60"}]`（传单对象报 "data was not an array"）。选项：BAIC N60 / BAIC N53 / BAIC B81VS
 - **fixVersion**：`B110/B120/B130/B210/B220/B230/B310/B320/B330/B420/B430` 系列，sw-cp Story 常用 B220/B230
 - **components**：常见 `sw-cp`、`sw-bsw`、`sw-ap`、`sw-data-loop`、`feature-*`
@@ -20,7 +20,7 @@
 
 ## IDC310（GAC — P034_iDC310_develop）
 
-- **笔记模板**：`Templates/IDC310 Story Template.md`；T51 车型用 `Templates/T51 story template.md`
+- **笔记模板**：`Templates/IDC310GAC Story Template.md`（原 IDC310 Story Template，2026-10-20 更名并按 IDC310GAC-7833 调参；IDC310 P034 老项目也用此模板，JIRA 表参数按实际单填）
 - **Variant**：cf_12025 级联（GAC/T09、GAC/T51 等），格式 `{"value": "GAC", "child": {"value": "T51"}}`
 - **T51 额外字段**（参考 IDC310-7990）：cf_15000 = `GAC T51` 数组 `[{"value": "GAC T51"}]`；cf_14803 = `GAC-Aion-T51-CN-Base-iDC310`；fixVersion `T51_G320_260214`
 - **Problem 链接**：`is solved by`
@@ -28,8 +28,8 @@
 ## IDC310GAC（广汽 iDC310 — Execution，J6B 需求落地项目）
 
 - J6BREQ / IR 广丰需求单的 Story 落在本项目（如 J6BREQ-12817 → IDC310GAC-7252）
-- **笔记模板**：`Templates/T51 story template.md`（结构统一，参考 J02 笔记）
-- **Variant**：cf_15000 数组 `[{"value": "GAC T75-G1"}]`（T75 车型；J02 曾用 "GAC T51" 占位）；cf_12025 不用
+- **笔记模板**：`Templates/IDC310GAC Story Template.md`（统一；**创建参数参考模板单 [IDC310GAC-7833](https://jira.imotion.ai:7070/browse/IDC310GAC-7833)**：fixVersion `AY7_G020v1_251015`、components `Diagnostic`，2026-10-20 用户确认）
+- **Variant**：cf_15000 数组（如 `[{"value": "GAC AY7"}]`/`[{"value": "GAC T68"}]`，按问题单/需求单实际变体填）；cf_12025 不用
 - **fixVersion**：`T75-G1_S.F00`、`T75_G270_S.010_260908` 等 T75 系列；需求单上的 `T75_1016` 等平台版本号在本项目不存在，需换算
 - **components**：MCU（mcu 侧 Story 参考 IDC310GAC-7008）
 - **需求链接**：type `implemented`，outwardIssue=需求单，inwardIssue=Story
