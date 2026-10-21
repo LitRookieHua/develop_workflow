@@ -1,6 +1,6 @@
 # 验证方法（Validation Methods）
 
-验证环节的统一入口。诊断类验证用 DiagnosticTester 自动跑用例；日志采集用 LogCollection；后续新增验证方法一律补充到本文档，其他地方只指向这里。
+验证环节的统一入口。诊断类验证用 DiagnosticTester 自动跑用例；日志采集用 LogCollection；在线调试用 TRACE32（imo-plugin-t32-toolkit）；后续新增验证方法一律补充到本文档，其他地方只指向这里。
 
 ## 诊断功能验证 — DiagnosticTester
 
@@ -43,6 +43,35 @@ python collect_j6b.py --port <A核串口> --project <项目> [--host 192.168.1.2
 - 落盘：`tools/LogCollection/logs/<项目>/mcu_<时间戳>/`，逐文件大小校验
 - 实时调试串口采集（插桩日志）：`tests/harness/mcu_log/capture_com68.py [baud]`（R 核口按串口识别规则现查，见 [serial-port-identification.md](serial-port-identification.md)）
 - 串口识别规则：[serial-port-identification.md](serial-port-identification.md)
+
+## 在线调试 — TRACE32（imo-plugin-t32-toolkit）
+
+适用：目标板运行时内部状态的验证与取证——断点/单步、内存变量查看、任务调度时序、堆栈占用、imo_com Scom 状态等 DiagnosticTester（黑盒报文层）和 LogCollection（日志层）覆盖不了的场景。
+
+### 1. 连接（Attach 模式，斜杠指令）
+
+| 平台 | 指令 | 目标 |
+| --- | --- | --- |
+| **J6B** | `/t32-j6b-connect <ELF路径>` | Horizon J6B / Cortex-R52 |
+| **TDA4** | `/t32-tda4-connect <ELF路径>` | TDA4VM CR5 MCU |
+| 其他 | `/t32-j6m-connect`、`/t32-tc234-connect`、`/t32-tc397-connect`、`/t32-u2a-connect` | J6M / TC234 / TC397 / U2A |
+
+- 连接后自动加载 ELF 符号 + 推导源码路径映射；ELF 用编译输出（`<工作区>/src/<仓库>/build/<preset>/rpu_arm_gcc` 下的 .elf）
+- 连接会话信息落 `.t32/project_info.json`（cwd 下），后续分析指令自动读取
+
+### 2. 调试分析（连接后可用，斜杠指令，J6B）
+
+| 指令 | 用途 |
+| --- | --- |
+| `/t32-os-orti` | AUTOSAR OS 任务/ISR 调度时序图 + CPU 占用统计（SNOOPer 非侵入采集） |
+| `/t32-os-stack` | 任务/ISR 堆栈用量统计、每核共享栈高水位与余量告警 |
+| `/t32-scom-view` | imo_com Scom 实时监控（MemPool/Subscriber/Runnable Watch 窗口） |
+| `/t32-scom-mempool` | MemPool 健康检查（pool 使用率、queue 连接状态） |
+| `/t32-scom-port-status` | 端口状态与数据流诊断（含 Scom 连接拓扑） |
+
+### 3. 通用调试操作
+
+断点/单步、dump 内存、抓 trace、写 cmm 脚本、RCL 自动化等直接用自然语言提需求（t32-plugin skill 触发，生成可运行的 PRACTICE/.cmm 或 Python RCL）；TRACE32 命令用法与报错排查先查本地知识库（t32-kb MCP 的 search_kb 工具）。
 
 ## 电源操作（验证配套）
 

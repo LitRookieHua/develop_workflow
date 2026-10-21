@@ -3,6 +3,24 @@
     "description": "JIRA Story 创建参数配置（按项目分节）。权威源配套文档：.claude/references/jira-operation.md。新增项目时在顶层加一个项目 key 节，字段含义见配套文档第 1 节。",
     "updated": "2026-10-21"
   },
+  "_general": {
+    "description": "通用基线（参照 IDC310GAC 实测提炼）。未配置的项目先按本节创建，遇 400 报错按字段逐项调整；解决后的实测参数沉淀到对应项目节。",
+    "project": {"key": "<项目KEY，如 IDC310GAC>"},
+    "issuetype": {"id": "10001"},
+    "fields_required": {
+      "summary": "英文标题（笔记 H1 同名）",
+      "description": "正文",
+      "components": [{"name": "Diagnostic"}],
+      "fixVersions": "项目内版本名；需求单上的平台版本号在本项目通常不存在，需换算；创建前用项目版本列表核对",
+      "duedate": "创建日 + 7 天，格式 YYYY-MM-DD",
+      "customfield_15000_VehicleVariant": {"format": "数组", "example": "[{\"value\": \"GAC AY7\"}]", "note": "按问题单/需求单实际变体填，选项随项目配置变化"},
+      "assignee": {"name": "Hua.Yao"}
+    },
+    "issuelinks": {
+      "Implements_JRQ": {"type": "implemented", "outwardIssue": "需求单", "inwardIssue": "新 Story", "required": false},
+      "Link_to_Problems": {"type": "is solved by", "direction": "问题单 is solved by 新 Story", "required": false}
+    }
+  },
   "IDC310GAC": {
     "project": {"key": "IDC310GAC"},
     "issuetype": {"id": "10001"},

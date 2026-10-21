@@ -6,7 +6,7 @@
 
 - **Y: 盘不允许任何 git 操作（含只读）**：git 一律 `ssh yaohua@10.0.12.42` 在服务器工作区执行
 - 代码修改禁止走 Y: 盘（写源码走 SSH：D: 暂存后 `scp` 推送，或 SSH heredoc）
-- 正式开发（分支/编码/PR）走 feature-development skill 在老工作区完成；problem-analysis 的 V2 工作区只做验证性修复，不上传
+- 代码修改按工作项类型分流：需求开发走 feature-development（V1 老工作区），问题修复走 problem-analysis（V2 工作区全流程交付）
 
 ## Commit 提交规则
 

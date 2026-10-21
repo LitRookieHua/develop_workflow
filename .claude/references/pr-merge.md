@@ -1,6 +1,16 @@
-# pr-merge：reviewers 名单与 PR 监控手册（创建 PR 前必读）
+# pr-merge：PR 创建、reviewers 名单与 PR 监控手册（创建 PR 前必读）
 
-reviewers 漏加 PR 就废（补加要走 PR 编辑接口且必须带 version）。本手册覆盖：reviewers 名单、飞书通知对象与 open_id、PR 状态监控循环、CI 失败处置。
+reviewers 漏加 PR 就废（补加要走 PR 编辑接口且必须带 version）。本手册覆盖：PR 创建 API、reviewers 名单、飞书通知对象与 open_id、PR 状态监控循环、CI 失败处置。
+
+## 0. PR 创建（Bitbucket Server REST API 1.0，也可用 `/bb` 技能）
+
+- 认证：Bearer token（`BBDC-` 前缀），在 `C:\Users\YH\.claude\mcp.json` 的 `bitbucket-mcu_app_tda4.env.BITBUCKET_API_TOKEN`
+- `POST https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/MCU/repos/<repo>/pull-requests`
+- 仓库：TDA4 → `mcu_app_tda4`；J6 → `mcu_app_j6` 或 `mcu_app_j6_v2`（按工作区选定的仓库）
+- 请求体：`{"title": "<commit 标题>", "description": "<commit 完整内容>", "fromRef": {"id": "refs/heads/<feature分支>"}, "toRef": {"id": "refs/heads/develop"}, "reviewers": [...按 §1 名单...]}`
+- release 分支的 feature 分支，PR 的 `toRef` 为对应 release 分支（如 `refs/heads/release/Chery/V2XEU_D065/V460`）
+- **PR 标题 = commit 标题，PR 内容 = commit 内容**
+- 创建后按 §2 发飞书通知，并按 §3 建 PR 监控
 
 ## 1. reviewers 名单（按仓库）
 
@@ -44,11 +54,11 @@ owner open_id（已解析，可直接用）：
 
 PR 创建 + 通知后，用 CronCreate 建一个每 10 分钟的定时任务（session-only，cron 用 `7-57/10 * * * *` 避开整点分钟），监控本 story 所有未合并 PR：
 
-1. 查状态：`GET https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/<PROJ>/repos/<repo>/pull-requests/<id>`（认证见 [token-authentication.md](../../../references/token-authentication.md)），state == `MERGED` 即完成
+1. 查状态：`GET https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/<PROJ>/repos/<repo>/pull-requests/<id>`（认证见 [token-authentication.md](token-authentication.md)），state == `MERGED` 即完成
 2. **审批通过即自动 merge**：state == `OPEN` 且任意一位人工 reviewer（排除 bot_ci 等 bot 账号）`approved == true` → 立即 `POST .../pull-requests/<id>/merge?version=<GET到的version>` 自动合入（2026-09-21 用户确认：一人通过即可 merge，无需两位 reviewer 都通过）。merge 失败打印错误继续下轮监控
    - **所有仓库（含 mcu_app_tda4，2026-10-14 实际发生）：imoci（bot_ci）CI 审批是强制要求**：人工 reviewer 全部 approved，merge 仍会被 veto（`Not all required reviewers have approved yet | imoci must review and approve`；CI 失败时还会加 `Some reviewers have requested changes: imoci`），必须等 CI 跑完 bot_ci 自动批后再 merge（CI 审批可能耗时 1 小时以上，期间监控轮次只需简短带过继续等）
    - **CI 失败（imoci NEEDS_WORK）的处置（2026-10-14 经验）**：
-     - 查失败任务：`GET https://ci.imotion.ai/api/v1/build-tasks/<task_id>`（认证用 tokens.md 的 CI service token，见 [token-authentication.md](../../../references/token-authentication.md)；task_id 从 Bitbucket build-status 的 url 取，如 `ci.imotion.ai/task/1349908/detail`），`data.detail.progress.build.<repo>.snapshots[0].commit_hash` 可看实际构建输入
+     - 查失败任务：`GET https://ci.imotion.ai/api/v1/build-tasks/<task_id>`（认证用 tokens.md 的 CI service token，见 [token-authentication.md](token-authentication.md)；task_id 从 Bitbucket build-status 的 url 取，如 `ci.imotion.ai/task/1349908/detail`），`data.detail.progress.build.<repo>.snapshots[0].commit_hash` 可看实际构建输入
      - **并发 flake 识别**：同一 agent（agent_id 相同）时间窗口重叠的多个构建、同输入一成一败、矩阵 fail-fast 连带 CANCELLED 兄弟任务 → 是 flake 不是代码问题，重触发即可
      - **重触发方法**：往 feature 分支推空 commit（`git commit --allow-empty -m 'chore(模块): [工单号] retrigger CI' && git push`），新 head 会重新触发 PR 的 OCR + CI
      - **mcu/zos 成对 PR 的依赖顺序**：PR 的 CI 构建用「目标分支的 zos_msg + mcu PR 补丁」组合（zos_msg 构建时按 EVM_CFG_FILE_NAME 前缀从自己仓库的 Gen_evm_dem_Script 找 xlsx 生成代码）。EVM 表导入类需求 mcu 生成的代码依赖 zos 仓库的新表 → **必须先合 zos PR，再重触发 mcu PR**，否则 mcu CI 会因新旧表不匹配失败

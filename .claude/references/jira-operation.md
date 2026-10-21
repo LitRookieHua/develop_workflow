@@ -7,7 +7,7 @@ JIRA 单的创建与状态流转统一权威源。其他地方涉及 JIRA 操作
 ### 1.1 通用规则（所有项目）
 
 - **summary 必须英文**（与笔记 H1 同名），description 正文可中文
-- 中文 payload 必须写临时 JSON 文件 + `--data-binary @file.json`（直接 `-d` 会报 Invalid UTF-8 start byte；Windows python 看不到 git bash 的 `/tmp`，临时文件放项目 `.tmp/` 或用 `cat file | python -c` 解析）
+- 中文 payload 必须写临时 JSON 文件 + `--data-binary @file.json`（直接 `-d` 会报 Invalid UTF-8 start byte；Windows python 看不到 git bash 的 `/tmp`，临时文件放项目 `.tmp/` 或用 `cat file | python -c` 解析）；python 打印中文前置 `PYTHONIOENCODING=utf-8`
 - 创建端点：`POST /rest/api/2/issue`；关联链接：`POST /rest/api/2/issueLink`
 - 创建成功后立即删除临时 payload 文件
 - 遇到 HTTP 400 "xxx是必需的" = 项目特有必填字段缺失 → 把解决后的结论补进 jira-story-params.json 对应项目节

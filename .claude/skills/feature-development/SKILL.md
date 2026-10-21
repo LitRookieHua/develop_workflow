@@ -9,13 +9,9 @@ description: MCU 需求开发全流程工作流（5 阶段：需求解析与架�
 
 开始前用 TaskCreate 为本次需求创建任务列表（**每阶段一个任务，共 5 个**），逐步勾选，随时可从任务列表恢复进度。
 
-## 路径角色
+## 路径角色与工作区
 
-| 路径 | 角色 |
-| --- | --- |
-| `D:\Workspace\01_Projects\02_Src` | 本地代码，**autosar 代码生成专用**（tools/autosar_gen 生成目标）+ scp 推送暂存 |
-| `10.0.12.42:/comp/user_data/yaohua/01_Src` | 服务器，**编译/代码分析/代码修复/git 全部操作/代码写入** |
-| `Y:\01_Src`（服务器映射，同一文件系统） | **仅限：刷写读 build 镜像、读代码、写 `.imobuilder`**。代码写和 git 读写一律 SSH（见 CLAUDE.md 安全红线） |
+路径角色表见 CLAUDE.md「路径角色」（Y: 盘红线同 CLAUDE.md 安全红线）。本 skill 用 **V1 老工作区**（`01_Workspace_TDA4` / `02_Workspace_J6`）做需求开发；环境搭建（项目/分支确认、.imobuilder、建分支）见阶段 2。
 
 ---
 
@@ -33,133 +29,57 @@ description: MCU 需求开发全流程工作流（5 阶段：需求解析与架�
 
 | 阶段 | 内容 | 执行者 |
 | --- | --- | --- |
-| 1 | 需求解析与架构映射：story-creation 立项 + docs/design 技术方案 | Claude |
+| 1 | 需求解析与架构映射：story-creation 立项 + 知识召回 + docs/design 技术方案 | Claude |
 | 2 | 任务准备与环境隔离：确认项目/分支/仓库，SSH 切 develop 建分支 | Claude（SSH） |
 | 3 | 核心配置与编码：SSH 写代码（scp 推送）、autosar 生成、SSH 编译 | Claude（SSH） |
 | 4 | SIL 与台架隔离验证：刷写（仅 J6）+ 手动验证 | 刷写 Claude / 验证**用户手动** |
-| 5 | 审查与合流：commit/push、PR、监控合并、总结笔记、关单、通知 | Claude |
+| 5 | 审查与合流：commit/push、PR、监控合并、技术沉淀、关单、通知 | Claude |
 
 ---
 
 ## 阶段 1：需求解析与架构映射
 
-1. **立项**：走 `story-creation` skill——创建 Obsidian 笔记（Work Database/ + 项目模板）+ 创建 JIRA Story 并互相关联，细则全在该 skill
-2. **技术方案（所有需求必写）**：`docs/design/YYYY-MM-DD-<工单号>-<主题>-design.md`，**按仓库模板写**（MCU/AUTOSAR BSW 功能 → [autosar-general-feature-design-template.md](../../docs/design/autosar-general-feature-design-template.md)；通用功能 → [general-functional-design-template.md](../../docs/design/general-functional-design-template.md)；模板含属性表/术语/参考文档/约束假设/架构交互含并发上下文/详细设计/异常容错/验收标准/追溯矩阵/ADR/开放问题，小改动按模板内使用说明精简）。技术内容至少覆盖：
+1. **立项**：走 `story-creation` skill——创建 Obsidian 笔记（Work Database/ + Work Item Template，规则见 [references/obsidian-notes.md](../../references/obsidian-notes.md)）+ 创建 JIRA Story 并互相关联，细则全在该 skill
+2. **知识召回——写方案之前先做**：检索 `docs/design/` 类似设计方案、`docs/analysis/` 相关个案、Obsidian `Work Database/` 笔记（检索规则见 [references/obsidian-notes.md](../../references/obsidian-notes.md) §7，关键词：需求功能名、模块名、项目变体）——命中同类方案 → 复用/更新历史结论加速编写；无命中 → 继续
+3. **技术方案（所有需求必写）**：`docs/design/YYYY-MM-DD-<工单号>-<主题>-design.md`，**按仓库模板写**（MCU/AUTOSAR BSW 功能 → [autosar-general-feature-design-template.md](../../../docs/design/autosar-general-feature-design-template.md)；通用功能 → [general-functional-design-template.md](../../../docs/design/general-functional-design-template.md)；模板含属性表/术语/参考文档/约束假设/架构交互含并发上下文/详细设计/异常容错/验收标准/追溯矩阵/ADR/开放问题，小改动按模板内使用说明精简）。技术内容至少覆盖：
    - 需求摘要与验收标准（从 JIRA 需求单 description 提取，原样整理）
    - **BSW 模块影响分析**：明确影响的具体模块与参数（如 Dcm 的 DID/RID、Dem 的 Debouncing 策略、PduR 路由表、Nvm 块）
    - 修改点清单（文件/模块级别，作为附录）
    - 验证方案（用什么手段验证）
-3. Obsidian 笔记 **Design 章节链接**该设计文档
+4. Obsidian 笔记 **Design 章节**一行指针链接该设计文档
 
 > 后续迭代：AI/脚本自动从 JIRA 提取验收标准。
 
 ## 阶段 2：任务准备与环境隔离
 
-⚠️ **关卡：建分支前必读 [references/workspace-setup.md](../../references/workspace-setup.md)**（.imobuilder 项目映射、J6 双仓库归属判断、依赖仓库同步）。
+⚠️ **关卡：动手前必读 [references/workspace-setup.md](../../references/workspace-setup.md)**（权威源：项目/分支/工作区确认、.imobuilder、J6 双仓库、SSH 切/建分支、依赖仓库同步、多分支与 release 规则）。
 
-1. **改 .imobuilder**：按 workspace `config/` 目录现查项目的 preset/build_product，改 `.imobuilder` 的 `build_product`（Y: 直改；速查表见 workspace-setup.md）
-2. **建分支**（对本阶段确认的修改仓库逐一执行）。分支命名：`feature/<jira工单号>-<标题小写连字符>`（如 `feature/D3ACYI-1271-v2x-series-send-mcu-system-info`）
+按手册在**老工作区**搭建开发环境：
 
-**TDA4**（仓库在 `/comp/user_data/yaohua/01_Src/01_Workspace_TDA4/src/` 下，如 `mcu_app_tda4`、`zos_msg`、`version_did`）：
-
-```bash
-ssh yaohua@10.0.12.42
-cd /comp/user_data/yaohua/01_Src/01_Workspace_TDA4/src/<仓库>/
-git reset --hard
-git clean -xdf
-git checkout develop
-git pull
-git fetch origin
-git checkout -b feature/<jira工单号>-<标题> origin/develop
-git push -u origin feature/<jira工单号>-<标题>
-```
-
-**J6**（仓库在 `/comp/user_data/yaohua/01_Src/02_Workspace_J6/src/` 下，如 `mcu_app_j6`、`mcu_app_j6_v2`、`zos_msg`、`version_did`；mcu 仓库按 workspace-setup.md 双仓库规则选定）：
-
-```bash
-ssh yaohua@10.0.12.42
-cd /comp/user_data/yaohua/01_Src/02_Workspace_J6/src/<仓库>
-# 后续命令同上
-```
-
-- 执行前如有未提交改动：先 `git -c core.filemode=false diff -- <files> > /tmp/backup.patch` 备份，切完后 `git apply` 恢复
-- SSH 密钥认证已配好
-
-**多分支规则**：若 develop 和 v460 等两个分支都需要修改，develop 分支先完整执行阶段 2-5，v460 分支再执行一遍；第二个分支的代码修改可直接用 cherry-pick 移植 develop 分支的 commit（见阶段 3）。
-
-**release 分支合入的分支创建**：需求需同时合入 release 分支时（如 `release/Chery/V2XEU_D065/V460`），develop 分支的阶段 2-5 完成后，从 **release 分支**基底创建独立 feature 分支：
-
-```bash
-git fetch origin
-git checkout -b feature/<jira工单号>-<标题>-<release简易分支名> origin/<release分支名>
-git push -u origin feature/<jira工单号>-<标题>-<release简易分支名>
-```
-
-- release 简易分支名 = release 分支名最后一节小写，如 `release/Chery/V2XEU_D065/V460` → `v460`（例：`feature/D3ACYI-1181-lateral-update-910-v460`）
-- 该分支的代码修改可直接 cherry-pick develop 分支的 commit（见阶段 3），PR 目标为对应 release 分支
-- 注意：develop 分支上的 mcal 符号链接等本地改动可能挡 checkout，按需先 `git checkout -- <文件>` 丢弃
+1. 确认项目/分支/工作区（手册 §1；多分支/release 合入需求此时确认，规则见手册 §5）
+2. 改 `.imobuilder` 的 `build_product`（手册 §2，`ls config/` 现查）
+3. 对确认的修改仓库逐一建 feature 分支（手册 §4：reset 前残留改动备份、分支命名、推送），依赖仓库同步切分支（手册 §4）
 
 ## 阶段 3：核心配置与编码
 
-**代码修改一律经 SSH 在服务器上写**（Y: 盘禁止写源码：mode 位会被映射破坏 644→755，且本地工具链有 CRLF 风险）。可选方式：
-
-1. **scp 推送**（推荐）：文件先写到 D: 本地暂存（或直接 heredoc 生成），再 `scp` 推到服务器对应路径
-2. **SSH heredoc/服务器端编辑**：小改动直接 `ssh yaohua@10.0.12.42 "cat > <服务器路径> <<'EOF' ... EOF"`
-3. **autosar 生成产物**：生成目标为 D: 本地（`D:\Workspace\01_Projects\02_Src`），再 `scp -r` 同步到服务器对应仓库路径
+**代码修改一律经 SSH 在服务器上写**（Y: 盘禁止写源码）。写入方式（scp 推送 / SSH heredoc / autosar 生成产物同步）见 [references/workspace-setup.md](../../references/workspace-setup.md) §6。
 
 - develop 分支：如上修改
 - release 分支（第二个分支）：可直接 cherry-pick develop 分支的 commit（SSH 执行 `git cherry-pick <commit-hash>`），冲突时手工解决（release 与 develop 代码有差异）
 
-**编译**（SSH）：
-
-**TDA4**：
-
-```bash
-ssh yaohua@10.0.12.42
-cd /comp/user_data/yaohua/01_Src/01_Workspace_TDA4/
-imobuilder clean mcu_app_tda4 -r
-imobuilder build mcu_app_tda4 -r
-```
-
-**J6**（`-x parking_dr uper_app` 必须带，这两个包的远端仓库 `ip/parking_dr`、`ip/uper_app` 已不存在，不带会 clone 失败；`<mcu_app_j6 或 mcu_app_j6_v2>` 按阶段 2 选定的仓库，v2 同样带 `-x`，2026-09-29 用户确认）：
-
-```bash
-ssh yaohua@10.0.12.42
-cd /comp/user_data/yaohua/01_Src/02_Workspace_J6/
-imobuilder clean <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
-imobuilder build <mcu_app_j6|mcu_app_j6_v2> -r -x parking_dr uper_app
-```
-
-编译耗时较长（可后台运行）。**编译失败 → 读 [references/build-troubleshooting.md](../../references/build-troubleshooting.md)**（J6 clean 末步失败属正常、勿接 `| grep` 管道、parking_dr/uper_app/MCU21 固件排障、依赖仓库分支核对）。失败修复后重试，通过后进入阶段 4。
+**编译**（SSH）：标准命令、关键规则（J6 `-x parking_dr uper_app` 必带、勿接 `| grep` 管道、编译前核对依赖仓库分支）一律查 **[references/build.md](../../references/build.md)**（权威源：命令 / 规则 / 排障 / 固件刷新）。编译失败先按报错判断是环境问题还是代码问题，排障对号入座；失败修复后重试，通过后进入阶段 4。
 
 > 后续迭代：零警告（Zero-warning）与 MISRA 静态规范本地强制检查。
 
 ## 阶段 4：SIL 与台架隔离验证
 
-**电源操作规则**：验证前 `cycle` 重启、验证后 `off` 关闭——命令、COM 号现查见 [references/validation-methods.md](../../references/validation-methods.md)「电源操作」节。J6 刷写的断电冷启动已由 ProgramBoard 工具内置完成，刷写前无需重复 `cycle`；台架无程控电源时提示用户手动断电/上电。
+**电源操作规则**：验证前 `cycle` 重启、验证后 `off` 关闭，无程控电源时提示用户手动断电/上电——命令与 COM 号见 [references/validation-methods.md](../../references/validation-methods.md)「电源操作」节；J6 刷写的断电冷启动已由工具内置（[flashing.md](../../references/flashing.md)），刷写前无需重复 `cycle`。
 
-**刷写固件（仅 J6，Windows 本地执行）**：用 `tools/ProgramBoard/` 一键刷写工具（`ProgramBoard_j6b.py`）把阶段 3 编译产物刷到板子。**在本机 Windows 执行**（串口/电源 COM 口都在本机，不走 SSH）：
-
-```bash
-cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
-python ProgramBoard_j6b.py --port <A核串口> --psu-com COM44 --config configs/<项目>.json --img-dir Y:/01_Src/02_Workspace_J6/src/<仓库>/build/<preset>/rpu_arm_gcc
-```
-
-示例：
-
-- N60（旧仓库）：`--config configs/n60_mcu.json --img-dir Y:/01_Src/02_Workspace_J6/src/mcu_app_j6/build/cpj_baic_n60_d310/rpu_arm_gcc`
-- J02（v2 仓库）：`--config configs/j02_mcu.json --img-dir Y:/01_Src/02_Workspace_J6/src/mcu_app_j6_v2/build/cpj_fawvw_j02_d310/rpu_arm_gcc`（镜像文件 `int_rpu_arm8r5_arm_j02_gnu.img`）
-
-- ⚠️ **`--img-dir` 必须显式传**：工具已从 `Y:\01_Src\tools\flash`（已删除）迁至 D 盘，脚本内置默认镜像路径指向 D 盘本地副本（无 build 产物），不传会找不到镜像；`--img-dir` 一律指向 Y: 盘上阶段 3 的服务器编译输出
-- A 核串口识别——**规则权威源 [references/serial-port-identification.md](../../references/serial-port-identification.md)**（J6/TDA4 判定规则 + 现场快查步骤 + 实测映射表）。COM 号随 USB 重枚举漂移，换板后必须按权威源重新判定；COM44 = KA3005P 电源（`power_control.py id` 可应答验证）；电源未接时省略 `--psu-com`（失败时提示人工断电）
-- 全自动流程（约 35 秒/次）：断电冷启动 → 20ms 周期发空格打断 uboot → `fastboot udp` → `flash MCU_a`/`MCU_b` → `fastboot reboot`；任一步失败自动断电重来（默认重试 3 次），退出码 0 成功 / 1 失败
-- 前提：板子 A 核串口 + 网线（与 PC 同网段）已接，供电走 KA3005P 输出（12V）
-- 失败排查看 `logs/flash_*.log`（`[SER]` 前缀为串口原始数据）；换新板/新 uboot 版本先跑 `--dry-run` 校准，参数与板子特性详见目录下 `README.md`
-- TDA4 工作区暂无自动刷写工具，跳过刷写直接进入手动验证
+**刷写固件（仅 J6，Windows 本地执行）**：命令、示例、`--img-dir` 规则（必须显式传、指向 Y: 盘本工作区编译输出）、串口/电源 COM 识别、自动流程与失败排查一律查 **[references/flashing.md](../../references/flashing.md)**（权威源）。`--img-dir` 指向老工作区 `Y:/01_Src/02_Workspace_J6/src/<仓库>/build/<preset>/rpu_arm_gcc`。TDA4 工作区无自动刷写工具，跳过刷写直接进入手动验证。
 
 **手动验证 —— 停下等待**：用户手动验证（台架/功能验证）。验证通过后用户会说继续。
 
-**验证方法统一入口：[references/validation-methods.md](../../references/validation-methods.md)**——诊断相关验证用 `tools/DiagnosticTester` 自动执行（1. 编写 testcase → 2. 运行验证）；采集 log 用 `tools/LogCollection`；电源操作配套见该文档。后续新增验证方法一律补充到该文档，其他地方只指向它。
+**验证方法统一入口：[references/validation-methods.md](../../references/validation-methods.md)**——诊断相关验证用 `tools/DiagnosticTester` 自动执行（1. 编写 testcase → 2. 运行验证）；采集 log 用 `tools/LogCollection`；在线调试用 TRACE32（J6B `/t32-j6b-connect`、TDA4 `/t32-tda4-connect`，含任务调度/堆栈/Scom 分析指令）；电源操作配套见该文档。后续新增验证方法一律补充到该文档，其他地方只指向它。
 
 ```bash
 python DiagnosticTester.py run testcase/<项目>/<用例>/<用例>.yaml --config configs/<项目>/<配置>.yaml
@@ -171,85 +91,15 @@ python DiagnosticTester.py run testcase/<项目>/<用例>/<用例>.yaml --config
 
 ## 阶段 5：审查与合流
 
-**提交 commit + push（SSH）**：
+**交付收尾统一走 [references/delivery.md](../../references/delivery.md)**（权威源：commit/push → 创建 PR → 技术沉淀（docs + 笔记）→ PR 全部合并后关单 → 通知报告人；与 problem-analysis 共用）。本 skill 的差异点：
 
-```bash
-ssh yaohua@10.0.12.42
-cd /comp/user_data/yaohua/01_Src/<工作区>/src/<仓库>
-git add <files>
-git commit -m "feat(模块名): [工单号] 项目名 + 描述"
-git push
-```
-
-commit 格式（全局规则，所有仓库）：`feat(模块名): [工单号] 项目名 + 描述`，如 `feat(dia_cfg): [D3ACYI-1271] V2x add F187 part number to MCU system info IPC`。**commit 内容必须全部使用英文**（title 和 body）。完整规则（含安全红线）见 [references/git-rules.md](../../references/git-rules.md)——其他地方查 git/commit 规则时一律指向该文档。注意：给参考示例时只套用格式，内容如实描述本次改动。
-
-push 后记下 commit hash（总结笔记要用）。
-
-**创建 Bitbucket PR + 飞书通知 owner**：
-
-⚠️ **关卡：创建 PR 前必读 [references/pr-merge.md](references/pr-merge.md)**（reviewers 名单、飞书通知对象与 open_id、PR 监控循环细则）。
-
-用 Bitbucket Server REST API 1.0（也可用 `/bb` 技能）：
-
-- 认证：Bearer token（`BBDC-` 前缀），在 `C:\Users\YH\.claude\mcp.json` 的 `bitbucket-mcu_app_tda4.env.BITBUCKET_API_TOKEN`
-- `POST https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/MCU/repos/<repo>/pull-requests`
-- 仓库：TDA4 → `mcu_app_tda4`；J6 → `mcu_app_j6` 或 `mcu_app_j6_v2`（按阶段 2 选定的仓库）
-- 请求体：`{"title": "<commit 标题>", "description": "<commit 完整内容>", "fromRef": {"id": "refs/heads/<feature分支>"}, "toRef": {"id": "refs/heads/develop"}, "reviewers": [...按 pr-merge.md 名单...]}`
-- release 分支的 feature 分支，PR 的 `toRef` 为对应 release 分支（如 `refs/heads/release/Chery/V2XEU_D065/V460`）
-- **PR 标题 = commit 标题，PR 内容 = commit 内容**
-- PR 创建后按 pr-merge.md 发飞书通知，并建每 10 分钟的 PR 监控（审批通过自动 merge、CI 失败处置、合并/拒绝通知本人）
-
-**总结 Obsidian 笔记**：
-
-- `status: In Review`
-- Subtasks 勾选完成项
-- Notes 新增本次日期记录：commit hash、PR 链接、待办（PR 合并后转已解决）
-- Related Links 加 PR 链接
-
-**关闭 JIRA 单和笔记（PR 合并后自动执行，无需用户确认）**。PR 监控确认全部 PR 已合并后执行；PR 尚未全部合并时不要做这步：
-
-1. **确认合并**：`GET .../pull-requests/<id>`，state == `MERGED`
-2. **JIRA 转已解决**：「开放」状态没有直接的解决流转，需两步 POST `https://jira.imotion.ai:7070/rest/api/2/issue/<key>/transitions`（认证见 [references/token-authentication.md](../../references/token-authentication.md)）。transition id 与必填字段一律查 [references/jira-operation.md](../../references/jira-operation.md)（权威源：Story 两步流转、Problem 三步流转、Reopen 机制、400 排错链）
-3. **关闭关联需求单/问题单**（2026-09-21 用户要求，漏关即收尾未完成）：除 story 外，笔记 frontmatter `parent_problems` / `parent_requirements` 及来源需求中列出的关联单都要一并关闭（流转 id 与必填字段同查 jira-operation.md）：
-   - **Problem 单**（issuetype=Problem）三步流转推进到 IMPLEMENTED
-   - **需求单（Requirement 等）**：查看其可用 transitions（`GET .../issue/<key>/transitions`）选合适的关闭流转，有必填字段按报错补齐
-4. **关闭笔记**：`status: Done`、填写 `completed` 日期、勾选关闭 Subtask、Notes 补关闭记录（PR 合并日期）
-
-**飞书通知需求报告人（PR 合并后自动执行）**：查看**来源需求单**（parent requirement，如 `IDC310BAICREQ-4639`）的报告人，飞书通知其需求已完成：
-
-1. **查报告人**（认证同上）：
-
-```bash
-curl -s -k -H "Authorization: Bearer <JIRA_TOKEN>" "https://jira.imotion.ai:7070/rest/api/2/issue/<来源需求单号>?fields=reporter"
-```
-
-取 `fields.reporter.displayName`（如 `Zhang San/张三`）。
-
-2. **查 open_id**：`lark-cli contact +search-user --queries "<姓名>" --as user`
-3. **发消息**（`--as user`，命令格式见 pr-merge.md §2）：
-
-消息格式：`<具体功能>已完成，并上传<分支列表>分支`
-
-- 具体功能 = 来源需求/笔记的功能描述（如 `N60 DTC表V4.0更新`）
-- 分支列表 = 本流程全部 PR 的目标分支：`develop`，有 release 合入时一并列出（如 `develop、release/Chery/V2XEU_D065/V460`）
-- 示例：`N60 DTC表V4.0更新已完成，并上传develop分支`
+- **技术沉淀**：docs 沉淀在阶段 1 已完成（`docs/design/` 设计文档），本阶段按 delivery.md §3 核对完整性并做 Obsidian 笔记台账总结（status/Code Changes/Status Updates/Related Links）
+- **通知报告人**：对象为**来源需求单**（parent requirement，如 `IDC310BAICREQ-4639`）的报告人
+- **关联单关闭**：来源需求单 + 关联问题单都一并关闭
 
 ---
 
-## ⚠️ 关键规则：Y: 盘只许刷写读镜像/读代码/写 .imobuilder，其余一律 SSH
+## ⚠️ 关键规则
 
-**Y:\01_Src 是服务器 10.0.12.42 磁盘 `/comp/user_data/yaohua/` 的网络映射（同一文件系统）**，但从 Windows 侧操作有两重破坏性：
-
-1. 本地 git `core.autocrlf=true`：本地执行 reset/checkout 会把工作区文件改写成 CRLF，污染服务器端仓库（2026-09-10 实际发生：3432 个文件被污染，需服务器端 reset --hard 修复）
-2. Y: 映射不保留文件执行位：经 Y: 写源文件会把 mode 644→755 带进 commit（2026-10-19 J02 DoIP 实际发生，产生一笔需 force-push 撤回的 mode 修正 commit）
-
-因此（2026-10-19 用户定规）：
-
-- **允许的 Y: 操作**：刷写读 build 镜像（`--img-dir Y:/...`）、读代码（Read/Grep/Glob）、写 `.imobuilder`
-- **禁止的 Y: 操作**：
-  - git 操作（读和写都算，含只读查询）——全部 `ssh yaohua@10.0.12.42` 执行
-  - 代码写（Edit/Write 源文件）——改走 SSH：D: 暂存后 `scp` 推送，或 SSH heredoc 写入服务器路径
-
-## Token 与安全
-
-存放位置、认证方式、踩坑规则（Bearer 前缀拼接、`\r\n` 剥离等）一律见 [references/token-authentication.md](../../references/token-authentication.md)（权威源）。红线：token 绝不内联到任何会被提交的文件，`.imobuilder` 含 CI token 不要暴露。
+- **Y: 盘只许刷写读镜像/读代码/写 `.imobuilder`，其余一律 SSH**——两重破坏性（CRLF 污染 3432 文件、mode 644→755 进 commit）与允许/禁止清单见 CLAUDE.md 安全红线（权威源）
+- Token 存放位置、认证方式、踩坑规则一律见 [references/token-authentication.md](../../references/token-authentication.md)（权威源）；红线：token 绝不内联到任何会被提交的文件，`.imobuilder` 含 CI token 不要暴露

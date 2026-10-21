@@ -18,3 +18,6 @@ tools/ProgramBoard/xmodem_tools_*/
 
 # tools/autosar_gen/Dem_AutoGen：清理备份
 tools/autosar_gen/Dem_AutoGen/Dem_AutoGen_Davinci/clear_dem_arxml/backup/
+
+# Claude 调度任务锁文件
+.claude/scheduled_tasks.lock
