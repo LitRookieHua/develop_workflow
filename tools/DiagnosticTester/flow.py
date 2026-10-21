@@ -199,8 +199,6 @@ def _parse_steps(raw_steps, cfg: dict) -> list[Step]:
         if addressing not in ("physical", "functional"):
             raise ConfigError(f"{where}.addressing: 只能是 physical 或 functional")
         if addressing == "functional":
-            if expect is not None:
-                raise ConfigError(f"{where}: 功能寻址步骤不支持 expect（发完即记，不做判定）")
             if diag.get("functional_id") is None:
                 raise ConfigError(f"{where}: 功能寻址需要 diagnostic.functional_id")
             sf_max = 62 if can["fd"] else 7
@@ -302,6 +300,22 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir):
                         log(f"[{i}] {_result_text(verdict, None, result)}")
                     rec.step(i, step.name, "physical",
                              f"27{lvl.seed_sub:02X}+27{lvl.key_sub:02X}", result, verdict)
+                elif step.addressing == "functional" and step.expect is not None:
+                    # 功能寻址 + expect：临时把 tx_id 切到 functional_id 发请求，
+                    # 响应仍走 response_id（rx_id 不变）。判定路径与物理寻址一致。
+                    log(f"[{i}] {step.name} (functional addressing, expect response)")
+                    log(f"[{i}] UDS TX: {step.request.hex().upper()}")
+                    saved_tx_id = transport.tx_id
+                    transport.tx_id = diag["functional_id"]
+                    try:
+                        result = uds.request(step.request, timeout_ms=step.timeout_ms)
+                    finally:
+                        transport.tx_id = saved_tx_id
+                    verdict = judge(step, result)
+                    rec.step(i, step.name, step.addressing,
+                             step.request.hex().upper(), result, verdict)
+                    log(f"[{i}] UDS RX: {_rx_text(result)}")
+                    log(f"[{i}] {_result_text(verdict, step.expect, result)}")
                 elif step.addressing == "functional":
                     log(f"[{i}] {step.name} (functional addressing, no response expected)")
                     log(f"[{i}] UDS TX: {step.request.hex().upper()}")

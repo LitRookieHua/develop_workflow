@@ -76,8 +76,10 @@ CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
   包裹的十六进制字符串，如 `"22F195"`）；可选 `expect`（期望响应前缀，
   省略则只发不判、超时不算失败）、`timeout_ms`（覆盖该步的 P2 超时）、
   `delay_after_ms`（该步收尾延时，整体覆盖 `step_delay_ms` 而非叠加）、
-  `addressing`（`physical` 默认 / `functional`：发完即记、不支持
-  `expect`，请求长度不得超过单帧上限——经典 7 字节、FD 62 字节）。
+  `addressing`（`physical` 默认 / `functional`）。功能寻址步骤带
+  `expect` 时按 response_id 收响应并判定（用于复现网关组播交付类问题，
+  如 PduR TP 网关过期长度）；不带 `expect` 则发完即记 SENT。功能寻址
+  请求长度不得超过单帧上限——经典 7 字节、FD 62 字节。
   另一类是安全解锁步骤：填 `security_access: <等级名>`（不可与
   `request`/`expect`/功能寻址同用，等级须在配置 security 节或为内置
   develop），执行完整 27 取种子 → 算密钥 → 发密钥序列，密钥响应
