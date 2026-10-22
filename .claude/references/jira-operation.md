@@ -30,7 +30,7 @@ JIRA 单的创建与状态流转统一权威源。其他地方涉及 JIRA 操作
 | Implements_JRQ | `issuelinks` | 选填 | 链接需求单（type `implemented`） |
 | Link to Problems | `issuelinks` | 选填 | 链接问题单（type `is solved by`） |
 
-已配置项目：**IDC310GAC**（含 fixVersion 换算规则、变体示例、模板单 7833）。其他项目参数后续总结时补进配置文件。
+已配置项目：**IDC310GAC**（含 fixVersion 换算规则、变体示例、模板单 7833）、**D3ACYI / F4CMC / D1CYC / IDC310BAIC**（参数取自各项目 Story 模板单，components 均为 `sw-cp`）。其他项目参数后续总结时补进配置文件。
 
 ### 1.3 创建步骤
 

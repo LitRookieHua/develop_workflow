@@ -1,7 +1,8 @@
 {
   "_meta": {
     "description": "JIRA Story 创建参数配置（按项目分节）。权威源配套文档：.claude/references/jira-operation.md。新增项目时在顶层加一个项目 key 节，字段含义见配套文档第 1 节。",
-    "updated": "2026-10-21"
+    "updated": "2026-10-21",
+    "note": "D3ACYI / F4CMC / D1CYC / IDC310BAIC 参数取自各项目 Story 模板单（见各节 reference_ticket），components 均为 sw-cp"
   },
   "_general": {
     "description": "通用基线（参照 IDC310GAC 实测提炼）。未配置的项目先按本节创建，遇 400 报错按字段逐项调整；解决后的实测参数沉淀到对应项目节。",
@@ -11,7 +12,7 @@
       "summary": "英文标题（笔记 H1 同名）",
       "description": "正文",
       "components": [{"name": "Diagnostic"}],
-      "fixVersions": "项目内版本名；需求单上的平台版本号在本项目通常不存在，需换算；创建前用项目版本列表核对",
+      "fixVersions": "项目内版本名,固定使用jira模板中的版本名",
       "duedate": "创建日 + 7 天，格式 YYYY-MM-DD",
       "customfield_15000_VehicleVariant": {"format": "数组", "example": "[{\"value\": \"GAC AY7\"}]", "note": "按问题单/需求单实际变体填，选项随项目配置变化"},
       "assignee": {"name": "Hua.Yao"}
@@ -28,7 +29,7 @@
       "summary": "英文标题（笔记 H1 同名）",
       "description": "正文",
       "components": [{"name": "Diagnostic"}],
-      "fixVersions_note": "项目内版本名，如 AY7_G020v1_251015 / T75-G1_S.F00；需求单上的平台版本号（如 T75_1016）在本项目不存在，需换算",
+      "fixVersions_note": "项目内版本名，固定 AY7_G020v1_251015 ",
       "duedate_rule": "创建日 + 7 天",
       "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"GAC AY7\"}]", "[{\"value\": \"GAC T68\"}]"], "note": "按问题单/需求单实际变体填"},
       "assignee": {"name": "Hua.Yao"}
@@ -38,5 +39,65 @@
       "Link_to_Problems": {"type": "is solved by", "direction": "问题单 is solved by 新 Story", "required": false}
     },
     "reference_ticket": "IDC310GAC-7833（模板单：fixVersion AY7_G020v1_251015、components Diagnostic）"
+  },
+  "D3ACYI": {
+    "project": {"key": "D3ACYI"},
+    "issuetype": {"id": "10001"},
+    "fields_required": {
+      "summary": "英文标题（笔记 H1 同名）",
+      "description": "正文",
+      "components": [{"name": "sw-cp"}],
+      "fixVersions_note": "项目内版本名，固定 V2XEU_V460v1",
+      "duedate_rule": "创建日 + 7 天",
+      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"iCAR V2X EU-V25/V27 海外\"}]"], "note": "按问题单/需求单实际变体填"},
+      "assignee": {"name": "Hua.Yao"}
+    },
+    "issuelinks": "同 _general（implemented / is solved by，选填）",
+    "reference_ticket": "D3ACYI-1941（IDC300CHERY Story 模板单：fixVersion V2XEU_V460v1、components sw-cp、变体 iCAR V2X EU-V25/V27 海外）"
+  },
+  "F4CMC": {
+    "project": {"key": "F4CMC"},
+    "issuetype": {"id": "10001"},
+    "fields_required": {
+      "summary": "英文标题（笔记 H1 同名）",
+      "description": "正文",
+      "components": [{"name": "sw-cp"}],
+      "fixVersions_note": "项目内版本名，固定 M110",
+      "duedate_rule": "创建日 + 7 天",
+      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"CMC RX\"}]"], "note": "按问题单/需求单实际变体填"},
+      "assignee": {"name": "Hua.Yao"}
+    },
+    "issuelinks": "同 _general（implemented / is solved by，选填）",
+    "reference_ticket": "F4CMC-38（IFC4CMC Story 模板单：fixVersion M110、components sw-cp、变体 CMC RX）"
+  },
+  "D1CYC": {
+    "project": {"key": "D1CYC"},
+    "issuetype": {"id": "10001"},
+    "fields_required": {
+      "summary": "英文标题（笔记 H1 同名）",
+      "description": "正文",
+      "components": [{"name": "sw-cp"}],
+      "fixVersions_note": "项目内版本名，固定 T480v1.0",
+      "duedate_rule": "创建日 + 7 天",
+      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"JETOUR T1J FL3\"}]"], "note": "按问题单/需求单实际变体填"},
+      "assignee": {"name": "Hua.Yao"}
+    },
+    "issuelinks": "同 _general（implemented / is solved by，选填）",
+    "reference_ticket": "D1CYC-2345（IDC100CHERY Story 模板单：fixVersion T480v1.0、components sw-cp、变体 JETOUR T1J FL3）"
+  },
+  "IDC310BAIC": {
+    "project": {"key": "IDC310BAIC"},
+    "issuetype": {"id": "10001"},
+    "fields_required": {
+      "summary": "英文标题（笔记 H1 同名）",
+      "description": "正文",
+      "components": [{"name": "sw-cp"}],
+      "fixVersions_note": "项目内版本名，固定 B230",
+      "duedate_rule": "创建日 + 7 天",
+      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"BAIC N60\"}]"], "note": "按问题单/需求单实际变体填"},
+      "assignee": {"name": "Hua.Yao"}
+    },
+    "issuelinks": "同 _general（implemented / is solved by，选填）",
+    "reference_ticket": "IDC310BAIC-1352（IDC310BAIC Story 模板单：fixVersion B230、components sw-cp、变体 BAIC N60）"
   }
 }
