@@ -1,0 +1,20 @@
+timing:
+  p2_ms: 50
+  p2star_ms: 5000
+  step_delay_ms: 100
+
+steps:
+  - name: 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: "0x27 冒烟：2703 请求种子（内部服务+crypto，新补丁最高风险目标；67 正响应或 7F/37 NRC 均可接受，不允许无响应挂死）"
+    request: "2703"
+  - name: "0x19 冒烟：1902AF 读 DTC（内部服务 ReadDTCInfo；59 正响应或 NRC 均可接受）"
+    request: "1902AF"
+  - name: "0x22 冒烟：22F190 读 VIN（external/idia 路径对照）"
+    request: "22F190"
+  - name: "0x3E 冒烟：3E00（内部服务立即响应）"
+    request: "3E00"
+    expect: "7E00"
+
+on_fail: continue

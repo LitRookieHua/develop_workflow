@@ -1,0 +1,26 @@
+timing:
+  p2_ms: 50
+  p2star_ms: 5000
+  step_delay_ms: 200
+
+steps:
+  - name: 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: "0x14 清DTC 第1轮（基线预期：首帧 7F1478 于 60-80ms 到达，超 P2=50ms 判 TIMEOUT=红；修复后首帧 10-20ms 到达，54 最终响应在 P2* 窗口内）"
+    request: "14FFFFFF"
+    expect: "54"
+  - name: "0x14 清DTC 第2轮"
+    request: "14FFFFFF"
+    expect: "54"
+  - name: "0x14 清DTC 第3轮"
+    request: "14FFFFFF"
+    expect: "54"
+  - name: "0x14 清DTC 第4轮"
+    request: "14FFFFFF"
+    expect: "54"
+  - name: "0x14 清DTC 第5轮"
+    request: "14FFFFFF"
+    expect: "54"
+
+on_fail: continue

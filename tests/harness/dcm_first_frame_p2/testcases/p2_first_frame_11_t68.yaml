@@ -1,0 +1,17 @@
+timing:
+  p2_ms: 50
+  p2star_ms: 20000
+  step_delay_ms: 200
+
+steps:
+  - name: 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: "0x11 ECUReset 对照（develop 已有 external 首周期 NRC78 补丁，预期首帧 7F1178 于 10-20ms 到达=绿；51 最终响应等待 NvM 写完成，p2star 放宽 20s；本步会触发真实复位，放最后）"
+    request: "1101"
+    expect: "51"
+  - name: 复位后等待重启完成（只发不判）
+    request: "1003"
+    delay_after_ms: 5000
+
+on_fail: continue
