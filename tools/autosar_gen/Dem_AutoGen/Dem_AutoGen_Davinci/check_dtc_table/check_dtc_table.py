@@ -1,5 +1,20 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""EVM 诊断问卷 (IDC_EVM_Config*.xlsx) 表格检查规则.
+
+表格约定: 无 DTC 映射的事件行, "DTC(hex)"/"DTC Name" 必须显式写 "N.A",
+不允许留空 (空 = 表格缺陷, 需修正表格并反馈问卷定义人, 不放宽校验).
+
+检查规则 (校验失败 = 表格不合要求, 按要求修改表格):
+  Rule 1  sheet 完整性: 必须包含含 PF_Event / RCore_Event_ / CPJ_Event_Net
+          的 sheet
+  Rule 2  无首尾空格: Event Name / DTC(hex) / DTC Name 三列的值不允许
+          含首尾空格
+  Rule 3  非空: 上述三列不允许空值/纯空格 —— 无 DTC 映射写 "N.A"
+  Rule 4  Prority 一致性: 同一 DTC(hex) 的 Prority 必须一致
+
+跳过规则: 首行 N.A 占位行、DTC(hex)="N.A" 的行不参与 Rule 2-4.
+"""
 import os
 import sys
 import glob
@@ -72,11 +87,11 @@ def check_not_empty(sheet_name, df):
         for col in CHECK_COLUMNS:
             val = row.get(col)
             if pandas.isna(val):
-                msg = f'[FAIL] [{sheet_name}] Row {excel_row}: "{col}" is empty'
+                msg = f'[FAIL] [{sheet_name}] Row {excel_row}: "{col}" is empty (write "N.A" if no DTC mapping)'
                 print(msg)
                 errors.append(msg)
             elif isinstance(val, str) and val.strip() == "":
-                msg = f'[FAIL] [{sheet_name}] Row {excel_row}: "{col}" is empty'
+                msg = f'[FAIL] [{sheet_name}] Row {excel_row}: "{col}" is empty (write "N.A" if no DTC mapping)'
                 print(msg)
                 errors.append(msg)
     return errors

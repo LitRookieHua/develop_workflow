@@ -11,6 +11,7 @@
 - **commit 格式**（MCU 仓库，全局规则）：`feat(模块名): [工单号] 项目名 + 描述`，**commit 内容必须全部英文**——完整规则见 [git-rules.md](.claude/references/git-rules.md)（权威源）
 - **JIRA 状态流转**：流转路线、transition id、必填字段、400 排错链一律先查 [jira-operation.md](.claude/references/jira-operation.md)（权威源：创建参数配置 jira-story-params.json + 状态流转），不要凭记忆猜 transition id；API 实测值与该文档冲突时以文档为准并及时更新文档
 - **AUTOSAR 生成代码**：`cpj_*/autosar/` 下源码的人工修改规则（patch 标记防生成覆盖等）一律先查 [autosar-code-generation.md](.claude/references/autosar-code-generation.md)（权威源，名称：autosar 代码生成规格；patch 规则是其中一个章节）
+- **DTC 表导入**（EVM 诊断问卷导入类需求的硬规则）：修正表格必须通知需求创建人、表格必须上传 zos_msg、校验失败修表不修工具等，一律先查 [dtc-table-import.md](.claude/references/dtc-table-import.md)（权威源）
 
 ## 路径角色
 
