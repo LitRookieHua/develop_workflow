@@ -78,6 +78,7 @@ git reset --hard && git clean -xdf && git checkout <branch_name> && git pull
 ## 5. 多分支与 release 分支规则（feature-development）
 
 - **多分支**：若 develop 和 v460 等两个分支都需要修改，develop 分支先完整执行阶段 2-5，v460 分支再执行一遍；第二个分支的代码修改可直接用 cherry-pick 移植 develop 分支的 commit
+- **release/第二分支的 cherry-pick 硬规则**：develop 分支修改完成并**验证 OK**（编译+台架验证通过）后，release 分支（或 T940 等第二目标分支）**直接 cherry-pick develop 分支的 commit 并提交即可，无需在第二分支重新编译验证**（2026-10-21 用户确认；冲突时才需要手工解决）
 - **release 分支合入**：需求需同时合入 release 分支（如 `release/Chery/V2XEU_D065/V460`）时，develop 分支的阶段 2-5 完成后，从 **release 分支**基底创建独立 feature 分支：
 
 ```bash

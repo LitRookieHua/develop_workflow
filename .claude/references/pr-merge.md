@@ -56,6 +56,7 @@ PR 创建 + 通知后，用 CronCreate 建一个每 10 分钟的定时任务（s
 
 1. 查状态：`GET https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/<PROJ>/repos/<repo>/pull-requests/<id>`（认证见 [token-authentication.md](token-authentication.md)），state == `MERGED` 即完成
 2. **审批通过即自动 merge**：state == `OPEN` 且任意一位人工 reviewer（排除 bot_ci 等 bot 账号）`approved == true` → 立即 `POST .../pull-requests/<id>/merge?version=<GET到的version>` 自动合入（2026-09-21 用户确认：一人通过即可 merge，无需两位 reviewer 都通过）。merge 失败打印错误继续下轮监控
+   - ⚠️ **审批状态判断必须用 activities 端点，不能用 GET PR 的 participants 字段**（2026-10-22 IDC310GAC-7888 实际发生）：本 Bitbucket 实例 PR GET 响应的 `participants` 数组返回空/不反映真实审批（韩乐乐与 bot_ci 均已 APPROVED 时仍显示 0 人），导致监控误判「无审批」两周不触发自动 merge。正确做法：`GET .../pull-requests/<id>/activities?limit=100`，取 `values[].action == "APPROVED"` 的 `user.name`——人工名单（韩乐乐/Lucas.Han、陶晓荣/Xiaorong.Tao、冯锡斌/Xibin.Feng 等）任一命中即人工批准，`bot_ci`/`imoci` 命中即 bot 批准。bot 批准 + 人工批准齐备即满足条件
    - **所有仓库（含 mcu_app_tda4，2026-10-14 实际发生）：imoci（bot_ci）CI 审批是强制要求**：人工 reviewer 全部 approved，merge 仍会被 veto（`Not all required reviewers have approved yet | imoci must review and approve`；CI 失败时还会加 `Some reviewers have requested changes: imoci`），必须等 CI 跑完 bot_ci 自动批后再 merge（CI 审批可能耗时 1 小时以上，期间监控轮次只需简短带过继续等）
    - **CI 失败（imoci NEEDS_WORK）的处置（2026-10-14 经验）**：
      - 查失败任务：`GET https://ci.imotion.ai/api/v1/build-tasks/<task_id>`（认证用 tokens.md 的 CI service token，见 [token-authentication.md](token-authentication.md)；task_id 从 Bitbucket build-status 的 url 取，如 `ci.imotion.ai/task/1349908/detail`），`data.detail.progress.build.<repo>.snapshots[0].commit_hash` 可看实际构建输入
