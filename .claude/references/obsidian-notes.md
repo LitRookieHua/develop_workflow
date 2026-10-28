@@ -41,21 +41,35 @@ JIRA 侧信息（fix version、due date、variant、assignee）**不进笔记**�
 ### 4.1 tags 取值规则
 
 1. tag 只写在 frontmatter 的 `tags:` 字段，**正文一律不写 #tag**
-2. 只用三层命名空间：`domain/` / `project/` / `vehicle/`；平铺 tag 禁止，**唯一例外：周报用 `weekly-report`**
-3. 全小写、连字符分词、`/` 分层；禁止大小写变体（DCM/dcm）、中文 tag、同义词（diag=diagnostic=诊断 只用 `domain/diag`）
-4. 只从下方固定词表选取；新技术域/新项目/新车型先以 `domain/xxx`、`project/xxx`、`vehicle/xxx` 形式**扩充本词表再用**，不再新增任何平铺 tag
+2. 只用三个命名空间：`domain/` / `project/` / `vehicle/`；平铺 tag 禁止，**唯一例外：周报用 `weekly-report`**。domain 按三大栈组织（diagnostic / communication / memory），栈内最深到子域四段（如 `domain/diagnostic/dcm/did`）
+3. 全小写、连字符分词、`/` 分层；禁止大小写变体（DCM/dcm）、中文 tag、同义词（diag=diagnostic=诊断 只用 `domain/diagnostic`）
+4. 只从下方固定词表选取；新项目/新车型以 `project/xxx`、`vehicle/xxx` 形式**扩充本词表再用**；新技术域归入对应栈的模块/子域（如 `domain/communication/xxx`），三栈之外确需新平铺域（如 ota 这类跨栈应用层）先问用户再入表
 5. **需要新增 tag 时先询问用户**，确认后更新本词表
 
-固定词表（2026-10-28 自全库笔记扫描整理）：
+固定词表（domain 层 2026-10-28 对齐 01_Autosar 三大栈重构；project/vehicle 自全库笔记扫描整理）：
+
+**domain/diagnostic 诊断栈**
+
+| 模块 | 子域 |
+| --- | --- |
+| `diagnostic/dcm` | `dcm/did`、`dcm/rid`、`dcm/uds`、`dcm/configure-bytes` |
+| `diagnostic/dem` | `dem/dtc` |
+| 栈内平铺 | `fim`、`det`、`doip`、`xcp` |
+
+**domain/communication 通信栈**（按 J6B 实际使用子集）：`can`、`canif`、`cannm`、`cansm`、`cantp`、`cantsyn`、`com`、`comm`、`pdur`、`ipdum`、`nm`
+
+**domain/memory 存储栈**：`nvm`、`memif`、`fee`、`fls`、`ea`、`eep`
+
+**domain 三栈外平铺（既有域）**：`ota`、`calibration`、`autosar`、`security`、`ipc`、`e2e`
 
 | 层 | 词表 |
 | --- | --- |
-| domain | `diag`（子域：`diag/dtc`、`diag/did`、`diag/uds`、`diag/rid`、`diag/configure-bytes`）、`dcm`、`dem`、`autosar`、`security`、`calibration`、`ipc`、`e2e`、`ota`、`nvm` |
 | project | `idc310`、`idc300`、`idc100`、`idc510`、`idc310gac`、`idc310baic`、`d3acyi`、`d1cyc`、`pdcu`、`f4cmc`、`cmc`、`j02`、`j6b`、`ifc4` |
 | vehicle | `gac`、`baic`、`n60`、`t68`、`t75`、`t1jfl3`、`t1lfl1`、`v2x`、`v2xeu`、`v2xsea`、`v2xme`、`ay7`、`sxt`、`rx`、`v25`、`t09`、`phev`、`s52`、`kufl` |
 | 平铺例外 | `weekly-report`（仅周报） |
 
 > 2026-10-28 变体清理：`vehicle/t1l` → `t1lfl1`、`vehicle/t1jfl1`/`vehicle/t1jfl5` → `t1jfl3`（各 1 篇笔记已改标）
+> 2026-10-28 domain 三栈重构迁移（全库笔记 + Work Database/README.md 示例同步）：`diag` → `diagnostic`；`diag/did`、`diag/rid`、`diag/uds`、`diag/configure-bytes` → `diagnostic/dcm/…`；`diag/dtc` → `diagnostic/dem/dtc`；`dcm` → `diagnostic/dcm`；`dem` → `diagnostic/dem`；`nvm` → `memory/nvm`
 
 ## 5. 章节语义与填写时机
 
