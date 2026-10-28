@@ -10,6 +10,9 @@ __pycache__/
 logs/
 *.log
 
+# Trace32Debug：运行时连接/ELF 缓存（所有层级）
+.t32/
+
 # tools/DiagnosticTester：本地测试用例
 tools/DiagnosticTester/testcase/
 
