@@ -1,0 +1,47 @@
+# IDC310GAC-8028 / IDC310GAC-4839 mechanism-1 reproduction
+# Loop: 1003 -> 1101(hardReset) -> expect final 51 positive response.
+# RED signature: 1101 step TIMEOUT (7F1178 seen but 5101 never arrives,
+# reset wins the race). Baseline (develop) expected to hit ~1/1000.
+timing:
+  p2_ms: 50
+  p2star_ms: 10000
+  step_delay_ms: 100
+
+steps:
+  - name: "C0001 enter extended session"
+    request: "1003"
+    expect: "5003"
+  - name: "C0001 1101 hard reset, expect final 5101 (TIMEOUT=repro RED)"
+    request: "1101"
+    expect: "51"
+    delay_after_ms: 5000
+  - name: "C0002 enter extended session"
+    request: "1003"
+    expect: "5003"
+  - name: "C0002 1101 hard reset, expect final 5101 (TIMEOUT=repro RED)"
+    request: "1101"
+    expect: "51"
+    delay_after_ms: 5000
+  - name: "C0003 enter extended session"
+    request: "1003"
+    expect: "5003"
+  - name: "C0003 1101 hard reset, expect final 5101 (TIMEOUT=repro RED)"
+    request: "1101"
+    expect: "51"
+    delay_after_ms: 5000
+  - name: "C0004 enter extended session"
+    request: "1003"
+    expect: "5003"
+  - name: "C0004 1101 hard reset, expect final 5101 (TIMEOUT=repro RED)"
+    request: "1101"
+    expect: "51"
+    delay_after_ms: 5000
+  - name: "C0005 enter extended session"
+    request: "1003"
+    expect: "5003"
+  - name: "C0005 1101 hard reset, expect final 5101 (TIMEOUT=repro RED)"
+    request: "1101"
+    expect: "51"
+    delay_after_ms: 5000
+
+on_fail: continue
