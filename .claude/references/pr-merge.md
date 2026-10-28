@@ -10,6 +10,7 @@ reviewers 漏加 PR 就废（补加要走 PR 编辑接口且必须带 version）
 - 请求体：`{"title": "<commit 标题>", "description": "<commit 完整内容>", "fromRef": {"id": "refs/heads/<feature分支>"}, "toRef": {"id": "refs/heads/develop"}, "reviewers": [...按 §1 名单...]}`
 - release 分支的 feature 分支，PR 的 `toRef` 为对应 release 分支（如 `refs/heads/release/Chery/V2XEU_D065/V460`）
 - **PR 标题 = commit 标题，PR 内容 = commit 内容**
+- **多仓库依赖顺序（zos_msg / version_did / mcu 同时修改时，2026-10-22 用户确认）**：MCU 代码 PR **必须等 zos_msg 与 version_did 的 PR 全部 merge 后再创建**（MCU 提交依赖这两个仓库，CI 用目标分支的依赖仓库组合构建，提前 PR 会因新枚举/新表不在目标分支而 CI 失败）；zos_msg 与 version_did 互不依赖，可同时 PR。交付流程：三仓库 commit/push 一起做，但只创建 zos_msg/version_did 的 PR 并通知监控，全部 MERGED 后再创建 MCU PR（此时依赖已进目标分支，CI 直接可过，无需重触发）
 - 创建后按 §2 发飞书通知，并按 §3 建 PR 监控
 
 ## 1. reviewers 名单（按仓库）
@@ -24,14 +25,8 @@ PR reviewers 必加 2 人：韩乐乐 `Lucas.Han`、陶晓荣 `Xiaorong.Tao`（B
 
 ## 2. 飞书通知 owner（PR 创建后）
 
-用 `lark-cli im +messages-send`（注意：**不要用 `lark-cli api POST /open-apis/im/v1/messages`，会 404**）：
+用 `lark-cli im +messages-send`（注意：**不要用 `lark-cli api POST /open-apis/im/v1/messages`，会 404**）。**消息格式遵循 [lark-messaging.md](lark-messaging.md)**（通知类，三行：功能 / PR链接 / 具体事项如"帮忙PR"），本节只管发给谁：
 
-```bash
-lark-cli im +messages-send --as user --user-id <ou_xxx> --text "<具体功能>
-<PR链接> 帮忙PR下"
-```
-
-- 具体功能 = 本次需求的功能描述（同笔记/来源需求，如 `N60 DTC表V4.0更新`）
 - 身份必须 `--as user`（应用身份会显示为 bot）
 - open_id 查询：`lark-cli contact +search-user --queries "名字1,名字2" --as user`
 
@@ -62,7 +57,7 @@ PR 创建 + 通知后，用 CronCreate 建一个每 10 分钟的定时任务（s
      - 查失败任务：`GET https://ci.imotion.ai/api/v1/build-tasks/<task_id>`（认证用 tokens.md 的 CI service token，见 [token-authentication.md](token-authentication.md)；task_id 从 Bitbucket build-status 的 url 取，如 `ci.imotion.ai/task/1349908/detail`），`data.detail.progress.build.<repo>.snapshots[0].commit_hash` 可看实际构建输入
      - **并发 flake 识别**：同一 agent（agent_id 相同）时间窗口重叠的多个构建、同输入一成一败、矩阵 fail-fast 连带 CANCELLED 兄弟任务 → 是 flake 不是代码问题，重触发即可
      - **重触发方法**：往 feature 分支推空 commit（`git commit --allow-empty -m 'chore(模块): [工单号] retrigger CI' && git push`），新 head 会重新触发 PR 的 OCR + CI
-     - **mcu/zos 成对 PR 的依赖顺序**：PR 的 CI 构建用「目标分支的 zos_msg + mcu PR 补丁」组合（zos_msg 构建时按 EVM_CFG_FILE_NAME 前缀从自己仓库的 Gen_evm_dem_Script 找 xlsx 生成代码）。EVM 表导入类需求 mcu 生成的代码依赖 zos 仓库的新表 → **必须先合 zos PR，再重触发 mcu PR**，否则 mcu CI 会因新旧表不匹配失败
+     - **mcu/zos 成对 PR 的依赖顺序**：PR 的 CI 构建用「目标分支的 zos_msg + mcu PR 补丁」组合（zos_msg 构建时按 EVM_CFG_FILE_NAME 前缀从自己仓库的 Gen_evm_dem_Script 找 xlsx 生成代码）。EVM 表导入类需求 mcu 生成的代码依赖 zos 仓库的新表 → **必须先合 zos PR，再重触发 mcu PR**，否则 mcu CI 会因新旧表不匹配失败。此为 MCU PR 已提前创建时的补救路径；规范做法见 §0 多仓库依赖顺序（MCU PR 等依赖 merge 后再创建，2026-10-22 起）
      - ⚠️ 推空 commit 前确认当前分支：checkout 被未跟踪文件挡住而失败时，后续 commit 会落在原分支（2026-10-14 实际推错过分支）。先看 checkout 输出再 commit；未跟踪的 `ti_j721s2_mcu_mcal/` 目录挡 checkout 时直接 `rm -rf` 掉（构建产物）
    - **zos_msg develop 分支仅允许 fast-forward merge**：develop 有新提交时 merge 会被 veto（Control Freak 提示 must rebase），需 SSH 执行 `git fetch origin && git checkout <feature分支> && git rebase origin/develop && git push --force-with-lease`，rebase 后 CI 会重新触发、bot_ci 审批重置，需重新等待
    - merge 409 报 `PullRequestOutOfDateException` 时用响应体里的 `currentVersion` 重试；veto 详细原因在错误响应体的 `errors[].vetoes[].summaryMessage`
@@ -71,9 +66,20 @@ PR 创建 + 通知后，用 CronCreate 建一个每 10 分钟的定时任务（s
 5. **久未审批催审**（可选，用户要求时启用）：用状态文件计数，第 N 次（如 18 次）检测仍无审批 → 给韩乐乐发加急催审——先 `lark-cli im +messages-send --as bot --user-id <韩乐乐open_id> --text "..."`（加急要求 bot 是消息发送者），再 `lark-cli im messages urgent_app --message-id <id> --user-id-type open_id --data '{"user_id_list":["<韩乐乐open_id>"]}' --as bot`；bot 发送失败则降级 `--as user` 普通消息。加急只发一次（urgent_sent 标志）
 6. 无变化则简短带过
 
-**飞书通知格式（尽量详细）：第一行 `<具体功能>`，第二行 `<PR链接> + <状态>`**
+**飞书通知格式遵循 [lark-messaging.md](lark-messaging.md)**（通知类三行格式），状态类通知：
 
-- MERGED：`<具体功能>` 换行 `<PR链接> 已合并`
-- DECLINED：`<具体功能>` 换行 `<PR链接> 被拒绝，原因：<原因>` — 原因从 PR 的 activities/comments 查：`GET .../pull-requests/<id>/activities`（token 同上），找最近的评审意见/评论；查不到具体原因就写「未见评审意见」
+- MERGED：`<具体功能>` 换行 `<PR链接>` 换行 `已合并`
+- DECLINED：`<具体功能>` 换行 `<PR链接>` 换行 `被拒绝，原因：<原因>` — 原因从 PR 的 activities/comments 查：`GET .../pull-requests/<id>/activities`（token 同上），找最近的评审意见/评论；查不到具体原因就写「未见评审意见」
 
 注意：定时任务仅在会话空闲时触发、会话关闭即停止（需跨会话监控时建 durable 任务并告知用户）；recurring 任务 7 天后自动过期，建任务时要向用户说明。
+
+## 4. 代码审核不通过的处置（2026-10-22 用户规则）
+
+PR 审核不通过（OCR 自动审核 blocking 意见、reviewer requested changes、merge 被 tasks/review veto）时，**不盲目重试 merge**，按以下流程：
+
+1. **评估审核意见**：逐条对照实际代码与权威依据验证是否成立——ISO 14229 / AUTOSAR SWS 等标准、同仓库其他项目参考实现（如 gwm B06-5 的 NRC 优先级注释）、DCM 生成代码的实际行为。注意 OCR 引用的参考代码可能不准确（2026-10-22 实际发生：OCR 声称 b81vs 的 0x28 有低 4 位解码，实测 b81vs 该 case 只有 NRC22 检查），结论必须自己核实代码后下
+2. **回复审核建议 + Resolve**：在 PR 上回复该评论（`POST .../pull-requests/<id>/comments`，请求体 `{"text": "...", "parent": {"id": <被回复评论id>}}`），说明评估结论与依据。回复后**再把该评论 Resolve 掉**（2026-10-22 用户要求，解除 merge 的 tasks 拦截）：`PUT .../pull-requests/<id>/comments/<评论id>`，请求体 `{"state": "RESOLVED", "version": <评论version，activities 响应里取>}`，成功返回 200 且 `resolver` 为本人。评论的 severity 保持 BLOCKER 不动，只改 state
+3. **同意修改 → 改代码**：修复 → 编译 → 刷写验证 → commit/push（OCR/CI 随新 head 自动重跑）→ release 分支 cherry-pick 同步 → 回复评论中引用新 commit hash
+4. **不同意修改 → 回复理由后继续等待**：说明需求/标准依据（如需求单明确规定的行为），保持监控等 reviewer 处理
+
+注：diff 锚定的 blocking 评论（severity=BLOCKER、state=OPEN、`transitionable: true`）会挡 merge（`All tasks must be resolved`）；回复 + Resolve + 新 commit 推送（OCR/CI 随新 head 重跑）后即可解除。OCR 若在新 head 上再提新 blocking 意见，按本节流程再评估处置。
