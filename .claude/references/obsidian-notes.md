@@ -33,10 +33,29 @@
 | `type` | `Story` / `Problem` |
 | `status` | `Todo` / `In Analysis` / `In Review` / `Done` |
 | `created` / `completed` | 创建 / 完成日期，`YYYY-MM-DD` |
-| `tags` | 自由 |
+| `tags` | 只从 §4.1 固定词表选取，三层结构，规则见 §4.1 |
 | `jira_url` | 主 JIRA 单链接；**单据信息以该单为准，不在笔记里复制**。立项时暂指向来源需求/问题单，Story 建好后回写为新 Story |
 
 JIRA 侧信息（fix version、due date、variant、assignee）**不进笔记**——创建/流转单据走 jira-operation.md。
+
+### 4.1 tags 取值规则
+
+1. tag 只写在 frontmatter 的 `tags:` 字段，**正文一律不写 #tag**
+2. 只用三层命名空间：`domain/` / `project/` / `vehicle/`；平铺 tag 禁止，**唯一例外：周报用 `weekly-report`**
+3. 全小写、连字符分词、`/` 分层；禁止大小写变体（DCM/dcm）、中文 tag、同义词（diag=diagnostic=诊断 只用 `domain/diag`）
+4. 只从下方固定词表选取；新技术域/新项目/新车型先以 `domain/xxx`、`project/xxx`、`vehicle/xxx` 形式**扩充本词表再用**，不再新增任何平铺 tag
+5. **需要新增 tag 时先询问用户**，确认后更新本词表
+
+固定词表（2026-10-28 自全库笔记扫描整理）：
+
+| 层 | 词表 |
+| --- | --- |
+| domain | `diag`（子域：`diag/dtc`、`diag/did`、`diag/uds`、`diag/rid`、`diag/configure-bytes`）、`dcm`、`dem`、`autosar`、`security`、`calibration`、`ipc`、`e2e`、`ota`、`nvm` |
+| project | `idc310`、`idc300`、`idc100`、`idc510`、`idc310gac`、`idc310baic`、`d3acyi`、`d1cyc`、`pdcu`、`f4cmc`、`cmc`、`j02`、`j6b`、`ifc4` |
+| vehicle | `gac`、`baic`、`n60`、`t68`、`t75`、`t1jfl3`、`t1lfl1`、`v2x`、`v2xeu`、`v2xsea`、`v2xme`、`ay7`、`sxt`、`rx`、`v25`、`t09`、`phev`、`s52`、`kufl` |
+| 平铺例外 | `weekly-report`（仅周报） |
+
+> 2026-10-28 变体清理：`vehicle/t1l` → `t1lfl1`、`vehicle/t1jfl1`/`vehicle/t1jfl5` → `t1jfl3`（各 1 篇笔记已改标）
 
 ## 5. 章节语义与填写时机
 
