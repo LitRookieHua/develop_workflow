@@ -14,3 +14,11 @@ timing:
   p2_ms: 50
   p2star_ms: 5000
   step_delay_ms: 50
+
+security:
+  app:
+    seed_sub: 0x01
+    key_sub: 0x02
+    algorithm: gac_shift_xor
+    params:
+      constant: "7AFC5EC0"
