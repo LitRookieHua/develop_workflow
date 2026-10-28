@@ -1,0 +1,20 @@
+timing:
+  p2_ms: 50
+  p2star_ms: 5000
+  step_delay_ms: 100
+
+steps:
+  - name: 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: "0x27 app 解锁（2701/2702 gac_shift_xor，t68_cx.yaml security 节验证）"
+    security_access: app
+  - name: 读标定模式 DID 9A59
+    request: "229A59"
+    expect: "629A59"
+  - name: "3101 启动 9AD4（预期 ~1s 早期正响应 71 01 9AD4；处许可冷却窗口则 NRC22 亦为预期。FAIL 只关注无响应/NRC78 挂死——即本步超时或仅回 7F3178）"
+    request: "31019AD4"
+    timeout_ms: 5000
+    expect: "71019AD4"
+
+on_fail: continue
