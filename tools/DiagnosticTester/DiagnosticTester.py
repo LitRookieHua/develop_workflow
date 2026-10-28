@@ -52,7 +52,7 @@ def make_driver(cfg):
 def new_run_dir(base: Path, prefix: str | None = None) -> Path:
     """按时间戳建运行目录；同秒重复运行追加 _1/_2… 后缀，避免互相覆盖。
 
-    prefix 为 None：子目录直接用时间戳（run 命令，建在用例 yaml 同目录下）；
+    prefix 为 None：子目录直接用时间戳（run 命令，base 由调用方给到 logs/<用例名>/）；
     给定 prefix：扁平命名 <prefix>_<时间戳>（probe/chat/unlock/dem，建在 logs/ 下）。
     """
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -81,9 +81,10 @@ def cmd_run(args):
     cfg = load_config(args.config)
     tc = load_testcase(args.testcase, cfg)
     driver = make_driver(cfg)
-    # 运行日志放在用例 yaml 同目录下的时间戳子目录：
-    # testcase/<项目>/<用例>/<用例>.yaml → testcase/<项目>/<用例>/<时间戳>/
-    run_dir = new_run_dir(Path(args.testcase).resolve().parent)
+    # 运行产物按用例名分层，logs/ 建在用例 yaml 所在目录的上一级（与 testcases/ 平级）：
+    # <harness>/testcases/<用例>.yaml → <harness>/logs/<用例名>/<时间戳>/
+    yaml_path = Path(args.testcase).resolve()
+    run_dir = new_run_dir(yaml_path.parent.parent / "logs" / yaml_path.stem)
     print(f"运行目录：{run_dir}")
     try:
         counters = run_flow(cfg, tc, driver, run_dir)
@@ -107,8 +108,8 @@ def build_transport(cfg, driver, rec):
 def open_session(cfg, project: str, prefix: str):
     """probe/chat/unlock/dem 共用的会话资源：driver → 记录器 → 传输 → UDS 客户端，退出时逆序收尾。
 
-    日志目录 = logs/<项目名>_<命令名>_<时间戳>（扁平）。run 的日志在用例 yaml
-    同目录下的时间戳子目录（与步骤执行耦合），cmd_run 不走此入口。
+    日志目录 = logs/<项目名>_<命令名>_<时间戳>（扁平）。run 的日志在
+    logs/<用例名>/<时间戳>/（cmd_run 自建运行目录，不走此入口）。
     """
     driver = make_driver(cfg)
     rec = Recorder(new_run_dir(LOGS_DIR, prefix=f"{project}_{prefix}"))

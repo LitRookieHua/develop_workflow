@@ -8,7 +8,7 @@
 - **问题专属 harness**：针对具体问题新建 `<模块名>_<harness描述>/` 目录（如 `dcm_sec_relock_1003`、`dcm_did_f190`）：
   - 根目录放 python 脚本（setup / execute / verify / teardown，越轻量越解耦越好）
   - `testcases/` 放测试用例（yaml 等）
-  - `logs/` 放运行产物（run.log、trace.blf、串口采集等），问题取证证据也归档在这里
+  - `logs/` 放运行产物（run.log、trace.blf、串口采集等），问题取证证据也归档在这里；DiagnosticTester `run` 的产物自动落 `logs/<用例名>/<时间戳>/`（2026-10-28 起默认）
 
 ## diag_test/ — DiagnosticTester 跑测试用例（第 8 步诊断功能验证）
 

@@ -190,8 +190,8 @@ security:
 
 ## 输出文件
 
-- **run**：日志生成在用例 yaml 同目录下 →
-  `testcase/<项目>/<用例>/<时间戳>/`
+- **run**：日志按用例名分层，logs/ 建在用例 yaml 所在目录的上一级 →
+  `<用例目录>/../logs/<用例名>/<时间戳>/`（harness 内即 `logs/<用例名>/<时间戳>/`）
 - **chat / probe / unlock / dem**：日志生成在 `logs/` 下 →
   `logs/<项目>_<命令名>_<时间戳>/`（项目名取配置的子目录，如
   `configs/n60/n60_zlg.yaml` → n60，configs 根下的配置取文件名）
