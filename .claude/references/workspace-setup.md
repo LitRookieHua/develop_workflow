@@ -97,4 +97,4 @@ git push -u origin feature/<jira工单号>-<标题>-<release简易分支名>
 
 1. **scp 推送**（推荐）：文件先写到 D: 本地暂存（或直接 heredoc 生成），再 `scp` 推到服务器对应路径（老工作区 / V2 工作区同理）
 2. **SSH heredoc/服务器端编辑**：小改动直接 `ssh yaohua@10.0.12.42 "cat > <服务器路径> <<'EOF' ... EOF"`
-3. **autosar 生成产物**（仅 feature-development）：生成目标为 D: 本地（`D:\Workspace\01_Projects\02_Src`），再 `scp -r` 同步到服务器对应仓库路径
+3. **autosar 生成产物**（仅 feature-development）：一律在 10.0.13.10服务器上生成（`ssh cp@10.0.13.10`，mcu 仓库切分支后跑 autosar_gen），改动文件从 10.0.13.10服务器 `scp` 推到 10.0.12.42服务器 对应仓库路径——路径与流程见 [autosar-code-generation.md](autosar-code-generation.md) §2/§3（权威源）

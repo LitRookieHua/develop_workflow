@@ -17,7 +17,8 @@
 
 | 路径 | 角色 |
 | --- | --- |
-| `D:\Workspace\01_Projects\02_Src` | 本地代码，**autosar 代码生成专用**（tools/autosar_gen 生成目标）+ scp 推送暂存 |
+| `D:\Workspace\01_Projects\02_Src` | 本地代码（与 10.0.13.10服务器同构镜像），autosar 生成**备用**环境 + scp 推送暂存 |
+| `10.0.13.10`（cp） | 服务器：**autosar 代码生成专用**（全部生成一律在此执行，见 [autosar-code-generation.md](.claude/references/autosar-code-generation.md) §2/§3） |
 | `10.0.12.42:/comp/user_data/yaohua/01_Src` | 服务器：**编译/代码分析/代码修复/git 全部操作/代码写入** |
 | `Y:\01_Src`（服务器映射，同一文件系统） | 仅：刷写读镜像、读代码、写 `.imobuilder` |
 | V1 工作区（`01_Workspace_TDA4` / `02_Workspace_J6`） | **需求开发**（feature-development skill） |

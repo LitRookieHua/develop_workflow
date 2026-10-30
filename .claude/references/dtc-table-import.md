@@ -11,4 +11,4 @@ EVM 诊断问卷（IDC_EVM_Config*.xlsx）导入 MCU 的流程规则，feature-d
 
 ## 流程位置
 
-完整开发流程（立项→分支→导入生成→编译→验证→PR）走 feature-development skill；表格导入子工具为 `tools/autosar_gen/Dem_AutoGen`（TDA4 Davinci 变体）。
+完整开发流程（立项→分支→导入生成→编译→验证→PR）走 feature-development skill；表格导入子工具为 `tools/autosar_gen/Dem_AutoGen`（TDA4 Davinci 变体），**一律在 10.0.13.10服务器上运行**（路径与流程见 [autosar-code-generation.md](autosar-code-generation.md) §2/§3）。
