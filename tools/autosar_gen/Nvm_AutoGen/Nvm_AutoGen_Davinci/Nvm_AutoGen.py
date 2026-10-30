@@ -53,7 +53,11 @@ GEN_NVM_SCRIPT = GEN_TOOLS / "gen_nvm_arxml" / "GenPdmARXML.py"
 CRM_GEN_SCRIPT = GEN_TOOLS / "gen_pdm_code" / "CrmGen.py"
 
 # license: USB over Network Client 连接服务器上的 WIBU CodeMeter-Stick
-USBCLNCMD = Path(r"D:\Program Files\USB over Network\usbclncmd.exe")
+# (本机装在 D:, 生成服务器 13.10 装在 C:, 依次探测)
+USBCLNCMD = next(p for p in (
+    Path(r"D:\Program Files\USB over Network\usbclncmd.exe"),
+    Path(r"C:\Program Files\USB over Network\usbclncmd.exe"),
+) if p.is_file())
 LICENSE_SRV_ID = "0"
 LICENSE_VID_PID_REV = "064f:2af9:0100"
 LICENSE_SERIAL = "000005243417"

@@ -40,7 +40,11 @@ EXCEL_GLOB = "*_NVM_List*.xlsx"
 
 FEATURES = ("check_nvm_table", "gen_nvm_arxml", "gen_pdm_code")
 
-RTA_CAR_HOME_DEFAULT = Path(r"D:/ETAS/RTA-CAR_12.7.0")
+# RTA-CAR 盘位: 本机 D:, 生成服务器 13.10 为 C:, 依次探测 (RTA_CAR_HOME 可覆盖)
+RTA_CAR_HOME_DEFAULT = next(p for p in (
+    Path(r"D:/ETAS/RTA-CAR_12.7.0"),
+    Path(r"C:/ETAS/RTA-CAR_12.7.0"),
+) if p.is_dir())
 BSW_TIMEOUT_S = 3600   # 全量 BSW 生成上限 60 分钟
 BSW_POLL_S = 15
 ERRORS_RE = re.compile(r"Errors:\s*(\d+)\s*,\s*Warnings:\s*(\d+)")

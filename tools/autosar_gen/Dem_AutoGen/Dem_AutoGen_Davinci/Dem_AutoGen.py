@@ -63,7 +63,11 @@ CHECK_EXCEL = GEN_TOOLS / "check_dtc_table" / "check_dtc_table.py"
 FIM_GEN = GEN_TOOLS / "gen_fim_code" / "dsmFidGen.py"
 
 # license: USB over Network Client 连接服务器上的 WIBU CodeMeter-Stick
-USBCLNCMD = Path(r"D:\Program Files\USB over Network\usbclncmd.exe")
+# (本机装在 D:, DaVinci 生成服务器装在 C:, 依次探测)
+USBCLNCMD = next(p for p in (
+    Path(r"D:\Program Files\USB over Network\usbclncmd.exe"),
+    Path(r"C:\Program Files\USB over Network\usbclncmd.exe"),
+) if p.is_file())
 LICENSE_SRV_ID = "0"
 LICENSE_VID_PID_REV = "064f:2af9:0100"
 LICENSE_SERIAL = "000005243417"
