@@ -25,6 +25,7 @@ class UiSession(QObject):
     log_line = Signal(str)
     state_changed = Signal(bool)  # True=已连接
     keepalive_failed = Signal(str)
+    frame_received = Signal(object, bool)  # 原始帧 tee（frame, is_rx），报文页数据源
 
     def __init__(self, base_dir: Path, parent=None):
         super().__init__(parent)
@@ -77,7 +78,8 @@ class UiSession(QObject):
             project = config_project(config_path)
             run_dir = new_run_dir(LOGS_DIR, prefix=f"{project}_ui")
             rec = Recorder(run_dir)
-            transport = build_transport(cfg, driver, rec)
+            transport = build_transport(cfg, driver, rec,
+                                        frame_hook=self.frame_received.emit)
             uds = self._build_uds(cfg, transport)
         except Exception:
             # 半链失败按逆序收尾，不泄漏 pump 线程/记录文件/设备句柄
@@ -112,7 +114,8 @@ class UiSession(QObject):
         if not self.connected or self._transport is not None:
             return
         try:
-            transport = build_transport(self.cfg, self._driver, self._rec)
+            transport = build_transport(self.cfg, self._driver, self._rec,
+                                        frame_hook=self.frame_received.emit)
             self._transport = transport
             self._uds = self._build_uds(self.cfg, transport)
         except Exception as e:
@@ -152,4 +155,5 @@ class UiSession(QObject):
             self._timer.stop()
             self.keepalive_failed.emit(f"3E80 发送失败：{e}（会话保持已自动停止）")
             return
+        self.frame_received.emit(frame, False)
         self.log_line.emit(f"会话保持 3E80 → functional 0x{self.functional_id:03X}")

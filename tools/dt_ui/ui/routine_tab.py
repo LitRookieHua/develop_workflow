@@ -15,6 +15,7 @@ class RoutineTab(QWidget):
     stop_requested = Signal()
     refresh_requested = Signal()
     browse_requested = Signal()
+    dem_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -26,13 +27,14 @@ class RoutineTab(QWidget):
         self._btn_run = QPushButton("运行")
         self._btn_stop = QPushButton("停止")
         self._btn_stop.setEnabled(False)
+        self._btn_dem = QPushButton("读DTC")
         self._btn_open = QPushButton("打开运行目录")
         self._btn_open.setEnabled(False)
         self._label = QLabel("（未连接）")
         self._label.setWordWrap(True)
 
         row = QHBoxLayout()
-        for b in (self._btn_refresh, self._btn_browse, self._btn_run, self._btn_stop):
+        for b in (self._btn_refresh, self._btn_browse, self._btn_run, self._btn_stop, self._btn_dem):
             row.addWidget(b)
         row.addStretch(1)
         row.addWidget(self._btn_open)
@@ -46,6 +48,7 @@ class RoutineTab(QWidget):
         self._btn_browse.clicked.connect(self.browse_requested)
         self._btn_run.clicked.connect(self._on_run)
         self._btn_stop.clicked.connect(self.stop_requested)
+        self._btn_dem.clicked.connect(self.dem_requested)
         self._btn_open.clicked.connect(self._open_dir)
 
     def _on_run(self):
@@ -69,7 +72,7 @@ class RoutineTab(QWidget):
         self._list.setCurrentRow(self._list.count() - 1)
 
     def set_running(self, running: bool):
-        for b in (self._btn_run, self._btn_refresh, self._btn_browse, self._list):
+        for b in (self._btn_run, self._btn_refresh, self._btn_browse, self._btn_dem, self._list):
             b.setEnabled(not running)
         self._btn_stop.setEnabled(running)
 

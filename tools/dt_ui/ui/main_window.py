@@ -14,9 +14,11 @@ from PySide6.QtWidgets import (
 )
 
 from flow import ConfigError, load_testcase, parse_hex_bytes, run_flow
+from dem import load_maps, run_dem
 from security import UnlockError, perform_unlock
 from uds import UdsResult
 
+from .framefmt import format_frame_line
 from .routine_tab import RoutineTab
 from .scan import scan_configs, scan_routines
 from .session import UiSession
@@ -40,6 +42,7 @@ class MainWindow(QMainWindow):
         self._session.log_line.connect(self._append_log)
         self._session.state_changed.connect(self._on_state_changed)
         self._session.keepalive_failed.connect(self._on_keepalive_failed)
+        self._session.frame_received.connect(self._on_frame)
 
         # 顶部工具条
         self._combo = QComboBox()
@@ -72,28 +75,16 @@ class MainWindow(QMainWindow):
         tabs.addTab(self._routine_tab, "例程运行")
         tabs.addTab(self._single_tab, "单发调试")
 
-        # 底部共享日志
-        self._log_view = QPlainTextEdit()
-        self._log_view.setReadOnly(True)
-        self._log_view.setMaximumBlockCount(5000)
-        self._log_view.setFont(QFont("Consolas"))
-        self._chk_autoscroll = QCheckBox("自动滚动")
-        self._chk_autoscroll.setChecked(True)
-        self._btn_clear = QPushButton("清空")
-        log_row = QHBoxLayout()
-        log_row.addWidget(QLabel("Log"))
-        log_row.addStretch(1)
-        log_row.addWidget(self._chk_autoscroll)
-        log_row.addWidget(self._btn_clear)
-        log_panel = QWidget()
-        log_lay = QVBoxLayout(log_panel)
-        log_lay.setContentsMargins(0, 0, 0, 0)
-        log_lay.addLayout(log_row)
-        log_lay.addWidget(self._log_view)
+        # 底部：日志/报文 双 Tab（各自独立自动滚动/清空）
+        log_page, self._log_view, self._chk_log = self._make_view("日志")
+        frame_page, self._frame_view, self._chk_frame = self._make_view("报文")
+        view_tabs = QTabWidget()
+        view_tabs.addTab(log_page, "日志")
+        view_tabs.addTab(frame_page, "报文")
 
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(tabs)
-        splitter.addWidget(log_panel)
+        splitter.addWidget(view_tabs)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
 
@@ -109,19 +100,47 @@ class MainWindow(QMainWindow):
         self._btn_connect.clicked.connect(self._toggle_connect)
         self._chk_keepalive.toggled.connect(self._on_keepalive_toggled)
         self._spin_period.valueChanged.connect(self._on_period_changed)
-        self._btn_clear.clicked.connect(self._log_view.clear)
         self._routine_tab.run_requested.connect(self._run_routine)
         self._routine_tab.stop_requested.connect(self._stop_flow)
         self._routine_tab.refresh_requested.connect(self._refresh_routines)
         self._routine_tab.browse_requested.connect(self._browse_routines)
+        self._routine_tab.dem_requested.connect(self._run_dem)
         self._single_tab.send_requested.connect(self._send_single)
         self._single_tab.unlock_requested.connect(self._unlock)
 
     # ---- 日志 ----
+    @staticmethod
+    def _make_view(title: str):
+        view = QPlainTextEdit()
+        view.setReadOnly(True)
+        view.setMaximumBlockCount(5000)
+        view.setFont(QFont("Consolas"))
+        chk = QCheckBox("自动滚动")
+        chk.setChecked(True)
+        btn = QPushButton("清空")
+        row = QHBoxLayout()
+        row.addWidget(QLabel(title))
+        row.addStretch(1)
+        row.addWidget(chk)
+        row.addWidget(btn)
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addLayout(row)
+        lay.addWidget(view)
+        btn.clicked.connect(view.clear)
+        return page, view, chk
+
     def _append_log(self, msg: str):
         self._log_view.appendPlainText(f"[{time.strftime('%H:%M:%S')}] {msg}")
-        if self._chk_autoscroll.isChecked():
+        if self._chk_log.isChecked():
             sb = self._log_view.verticalScrollBar()
+            sb.setValue(sb.maximum())
+
+    def _on_frame(self, frame, is_rx: bool):
+        self._frame_view.appendPlainText(format_frame_line(frame, is_rx))
+        if self._chk_frame.isChecked():
+            sb = self._frame_view.verticalScrollBar()
             sb.setValue(sb.maximum())
 
     # ---- 连接 ----
@@ -219,7 +238,8 @@ class MainWindow(QMainWindow):
         def job():
             return run_flow(cfg, tc, driver, run_dir,
                             log_hook=self.log_line.emit,
-                            should_stop=stop_event.is_set)
+                            should_stop=stop_event.is_set,
+                            frame_hook=self._session.frame_received.emit)
 
         self._routine_tab.set_running(True)
         self._routine_tab.set_status(f"运行中：{tc_path.stem}")
@@ -324,6 +344,40 @@ class MainWindow(QMainWindow):
             f"UDS RX: {rx}"
             + (f"（NRC 0x{result.nrc:02X}）" if result.nrc is not None else ""))
         self.statusBar().showMessage("解锁成功" if result.ok else "解锁失败")
+
+    # ---- DTC 读取 ----
+    def _run_dem(self):
+        if self._single_thread is not None or self._flow_thread is not None:
+            return
+        if not self._session.connected:
+            self.statusBar().showMessage("请先连接", 5000)
+            return
+        cfg_path = Path(self._combo.currentData())
+        try:
+            maps = load_maps(cfg_path.parent)
+        except ConfigError as e:
+            QMessageBox.critical(self, "DTC map 加载失败", str(e))
+            return
+        unlock = self._session.cfg["security_levels"].get("develop")
+        uds = self._session.uds
+
+        def job():
+            return run_dem(uds, maps, self.log_line.emit, unlock=unlock)
+
+        self._single_tab.set_busy(True)
+        self._single_thread = FuncThread("dem", job, self)
+        self._single_thread.done.connect(lambda _n, res: self._dem_done(res))
+        self._single_thread.start()
+
+    def _dem_done(self, res):
+        self._single_thread = None
+        self._single_tab.set_busy(not self._session.connected)
+        if isinstance(res, Exception):
+            self._append_log(f"DTC 读取异常：{res}")
+            self.statusBar().showMessage(f"DTC 读取异常：{res}", 5000)
+            return
+        self.statusBar().showMessage(
+            "DTC 读取完成" if res == 0 else "DTC 读取完成（部分项失败）")
 
     # ---- 退出 ----
     def closeEvent(self, event):
