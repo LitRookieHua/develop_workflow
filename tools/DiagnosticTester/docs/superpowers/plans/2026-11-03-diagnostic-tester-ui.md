@@ -1069,7 +1069,7 @@ class MainWindow(QMainWindow):
             self._routine_tab.add_entry(Path(p))
 
     def _run_routine(self, path):
-        if self._flow_thread is not None:
+        if self._flow_thread is not None or self._single_thread is not None:
             return
         if not self._session.connected:
             self.statusBar().showMessage("请先连接", 5000)
@@ -1201,9 +1201,19 @@ class MainWindow(QMainWindow):
             if self._flow_stop is not None:
                 self._flow_stop.set()
             self._append_log("关闭窗口：等待当前步骤结束（最多 2s）…")
-            self._flow_thread.wait(2000)
+            if not self._flow_thread.wait(2000):
+                _detach_later(self._flow_thread)
+        if self._single_thread is not None and self._single_thread.isRunning():
+            if not self._single_thread.wait(2000):
+                _detach_later(self._single_thread)
         self._session.disconnect()
         super().closeEvent(event)
+
+
+def _detach_later(t: FuncThread) -> None:
+    """关窗等待超时：解除父子关系并在线程结束后自毁，避免窗口析构摧毁运行中的线程。"""
+    t.setParent(None)
+    t.finished.connect(t.deleteLater)
 
 
 def new_run_dir_for(tc_path: Path) -> Path:
