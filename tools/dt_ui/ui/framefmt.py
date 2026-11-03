@@ -28,3 +28,11 @@ def format_frame_line(frame: CanFrame, is_rx: bool,
     arrow = "RX" if is_rx else "TX"
     data = " ".join(f"{b:02X}" for b in frame.data)
     return f"[{ts}] {arrow} {frame.can_id:03X} {_frame_type(frame.data)} {data}"
+
+
+def diagnostic_ids(diag: dict) -> frozenset[int]:
+    """报文页过滤集合：diagnostic 节的 request/response/functional 三 ID
+    （functional 缺省时仅两个）。总线其余流量不进报文页，仅落 BLF。"""
+    return frozenset(v for v in (diag.get("request_id"), diag.get("response_id"),
+                                 diag.get("functional_id"))
+                     if v is not None)

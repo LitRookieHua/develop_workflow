@@ -18,7 +18,7 @@ from dem import load_maps, run_dem
 from security import UnlockError, perform_unlock
 from uds import UdsResult
 
-from .framefmt import format_frame_line
+from .framefmt import diagnostic_ids, format_frame_line
 from .routine_tab import RoutineTab
 from .scan import scan_configs, scan_routines
 from .session import UiSession
@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):
         self._flow_thread: FuncThread | None = None
         self._single_thread: FuncThread | None = None
         self._flow_stop: threading.Event | None = None
+        self._diag_ids: frozenset = frozenset()  # 报文页过滤：diagnostic 三 ID
 
         self._session = UiSession(self._base)
         self._session.log_line.connect(self._append_log)
@@ -140,6 +141,9 @@ class MainWindow(QMainWindow):
             sb.setValue(sb.maximum())
 
     def _on_frame(self, frame, is_rx: bool):
+        # 只显示诊断相关帧（isotp tap 在 rx_id 过滤前回调，会带上总线全部流量）
+        if frame.can_id not in self._diag_ids:
+            return
         self._frame_view.appendPlainText(format_frame_line(frame, is_rx))
         if self._chk_frame.isChecked():
             sb = self._frame_view.verticalScrollBar()
@@ -163,6 +167,7 @@ class MainWindow(QMainWindow):
     def _on_state_changed(self, connected: bool):
         if connected:
             can = self._session.cfg["can"]
+            self._diag_ids = diagnostic_ids(self._session.cfg["diagnostic"])
             self._label_conn.setText(
                 f"● 已连接 {self._combo.currentText()} · {can['device']} ch{can['channel']}")
             self._btn_connect.setText("断开")
@@ -175,6 +180,7 @@ class MainWindow(QMainWindow):
             self._refresh_routines()
             self.statusBar().showMessage(f"日志目录：{self._session.run_dir}")
         else:
+            self._diag_ids = frozenset()
             self._label_conn.setText("○ 未连接")
             self._btn_connect.setText("连接")
             self._combo.setEnabled(True)

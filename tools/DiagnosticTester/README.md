@@ -30,8 +30,9 @@ CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
   「读DTC」一键执行 10 03 → develop 解锁 → 19 02 0F + event DID + fimfid，
   依赖配置目录下 dtc_map/event_map/fimfid_map/dem_dids.yaml）/
   **单发调试**（hex 收发 + 0x27 安全解锁，类 chat）
-- 底部**日志 / 报文**双 Tab：日志=事件流（与 run.log 同格式）；报文=诊断总线
-  原始 CAN 帧逐行显示（不做 UDS 层转换，含 3E80 保活帧，与 trace.blf 同源）
+- 底部**日志 / 报文**双 Tab：日志=事件流（与 run.log 同格式）；报文=原始 CAN 帧
+  逐行显示（不做 UDS 层转换，仅 diagnostic 配置的 request/response/functional
+  三个 CAN ID，含 3E80 保活帧；总线其余流量只落 trace.blf）
 - 会话保持 3E80：连接后可开关、周期可调（默认 2500ms，
   功能寻址直发、需配置 `functional_id`）
 - 例程运行产物落盘规则与 CLI `run` 一致；连接会话另落盘

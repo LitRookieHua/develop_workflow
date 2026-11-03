@@ -89,11 +89,12 @@ tools/DiagnosticTester/
   security 节 + 内置 develop）+ 解锁按钮 + 收发历史表（时间/TX/RX/NRC/耗时，
   双击回填 TX）
 - **日志 Tab**：QPlainTextEdit，行格式与 run.log 一致；自动滚动开关 / 清空按钮
-- **报文 Tab**（修订新增）：诊断总线**原始 CAN 帧逐行显示，不做 UDS 层转换**。
+- **报文 Tab**（修订新增）：**原始 CAN 帧逐行显示，不做 UDS 层转换**，且仅显示
+  diagnostic 配置的 request/response/functional 三个 CAN ID（isotp tap 在 rx_id
+  过滤前回调，UI 层负责按三 ID 过滤；总线其余流量仍照常落 trace.blf）。
   行格式 `[hh:mm:ss.mmm] TX|RX <ID> <SF|FF|CF|FC> <hex data>`；数据源为
   IsoTpTransport 的 tap 回调（pump/sender 线程 emit，主线程渲染），功能寻址
-  直发帧与 3E80 保活帧同样进此页；与 trace.blf 落盘同源。自动滚动 / 清空独立于
-  日志 Tab
+  直发帧与 3E80 保活帧同样进此页。自动滚动 / 清空独立于日志 Tab
 
 ## 4. 功能行为
 
