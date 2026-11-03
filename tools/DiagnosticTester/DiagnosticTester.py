@@ -95,11 +95,16 @@ def cmd_run(args):
     return 0 if counters["fail"] == 0 and counters["timeout"] == 0 else 1
 
 
-def build_transport(cfg, driver, rec):
+def build_transport(cfg, driver, rec, frame_hook=None):
     diag = cfg["diagnostic"]
+
+    def tap(f, rx):
+        rec.frame(f, rx)
+        if frame_hook is not None:
+            frame_hook(f, rx)
+
     t = IsoTpTransport(driver, tx_id=diag["request_id"], rx_id=diag["response_id"],
-                       is_fd=cfg["can"]["fd"],
-                       tap=lambda f, rx: rec.frame(f, rx), log=rec.event)
+                       is_fd=cfg["can"]["fd"], tap=tap, log=rec.event)
     t.start()
     return t
 

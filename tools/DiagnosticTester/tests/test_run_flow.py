@@ -265,6 +265,47 @@ def test_log_hook_tees_events(tmp_path):
     assert "UDS TX: 1003" in log_text  # tee 而非替代：落盘内容完整
 
 
+def test_frame_hook_receives_tx_and_rx(tmp_path):
+    # frame_hook 与 log_hook 同款 tee：物理步骤 TX/RX 原始帧都回调
+    cfg, tc = load(tmp_path)
+    mock = MockCanDriver()
+
+    def on_send(frame):
+        d = frame.data
+        req = d[1:1 + d[0]]  # 按SF PCI长度截取（帧补齐到8字节）
+        if req == bytes.fromhex("1003"):
+            mock.push_rx(0x78C, bytes([4]) + bytes.fromhex("50030032"))
+        elif req == bytes.fromhex("22F195"):
+            mock.push_rx(0x78C, bytes([5]) + bytes.fromhex("62F1950102"))
+
+    mock.on_send = on_send
+    frames = []
+    summary = run_flow(cfg, tc, mock, tmp_path,
+                       frame_hook=lambda f, rx: frames.append((f, rx)))
+    assert summary == {"total": 2, "pass": 2, "fail": 0, "timeout": 0}
+    tx = [f for f, rx in frames if not rx]
+    rxs = [f for f, rx in frames if rx]
+    assert any(f.can_id == 0x70C and f.data[:3] == bytes([2, 0x10, 0x03])
+               for f in tx)  # TX：请求ID + SF PCI 02 10 03
+    assert any(f.can_id == 0x78C and f.data[:3] == bytes([4, 0x50, 0x03])
+               for f in rxs)  # RX：响应ID + SF PCI 04 50 03
+
+
+def test_frame_hook_functional_no_expect(tmp_path):
+    # 功能寻址无 expect 步骤绕过 transport tap，须在 driver.send 处补调 hook
+    tc_text = STEPS.replace(
+        '  - {name: s1, request: "1003", expect: "5003"}\n'
+        '  - {name: s2, request: "22F195", expect: "62F195"}',
+        '  - {name: f1, request: "1003", addressing: functional}')
+    cfg, tc = load(tmp_path, tc_text=tc_text)
+    mock = MockCanDriver()
+    frames = []
+    summary = run_flow(cfg, tc, mock, tmp_path,
+                       frame_hook=lambda f, rx: frames.append((f, rx)))
+    assert summary == {"total": 1, "pass": 1, "fail": 0, "timeout": 0}
+    assert [(f.can_id, rx) for f, rx in frames] == [(0x7DF, False)]
+
+
 def test_should_stop_before_any_step(tmp_path):
     # 每步开始前检查：恒 True → 一步不发，汇总全 0
     cfg, tc = load(tmp_path)

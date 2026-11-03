@@ -112,6 +112,50 @@ def test_run_log_dir_under_logs_beside_testcase(run_cli, tmp_path):
         "logs/<用例名>/ 下未生成时间戳运行目录"
 
 
+def test_build_transport_frame_hook(tmp_path):
+    # build_transport 的 frame_hook：TX 经 transport tap 回调 (frame, False)
+    from flow import load_config
+    from recorder import Recorder
+    cfg_path = tmp_path / "cfg_hook.yaml"
+    cfg_path.write_text(CONFIG, encoding="utf-8")
+    cfg = load_config(cfg_path)
+    mock = MockCanDriver()
+    frames = []
+    with Recorder(tmp_path / "run_hook") as rec:
+        t = DiagnosticTester.build_transport(cfg, mock, rec,
+                                             frame_hook=lambda f, rx:
+                                             frames.append((f, rx)))
+        try:
+            t.send_payload(bytes.fromhex("1003"))  # 单帧 SF，无需流控
+        finally:
+            t.stop()
+        rec.close()
+        mock.close()
+    assert frames and frames[0][1] is False
+    assert frames[0][0].can_id == 0x70C
+    assert frames[0][0].data[:3] == bytes([2, 0x10, 0x03])
+
+
+def test_build_transport_without_frame_hook(tmp_path):
+    # 缺省 frame_hook（现有调用方式）不受影响，仍正常发帧
+    from flow import load_config
+    from recorder import Recorder
+    cfg_path = tmp_path / "cfg_plain.yaml"
+    cfg_path.write_text(CONFIG, encoding="utf-8")
+    cfg = load_config(cfg_path)
+    mock = MockCanDriver()
+    with Recorder(tmp_path / "run_plain") as rec:
+        t = DiagnosticTester.build_transport(cfg, mock, rec)
+        try:
+            t.send_payload(bytes.fromhex("1003"))
+        finally:
+            t.stop()
+        rec.close()
+        mock.close()
+    assert len(mock.sent) == 1
+    assert mock.sent[0].can_id == 0x70C
+
+
 def test_probe_log_dir_uses_project(run_cli, tmp_path):
     # chat/probe/unlock/dem 的日志目录 = 项目名_命令名
     mock = MockCanDriver()  # 无响应超时无妨，目录已建
