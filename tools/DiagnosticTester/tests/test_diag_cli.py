@@ -101,14 +101,15 @@ def test_run_smoke(run_cli):
     assert "PASS 1 / FAIL 0 / TIMEOUT 0 / 共 1/1" in out
 
 
-def test_run_log_dir_beside_testcase_yaml(run_cli, tmp_path):
-    # run 的日志目录 = 用例 yaml 同目录下的时间戳子目录
+def test_run_log_dir_under_logs_beside_testcase(run_cli, tmp_path):
+    # run 的日志目录 = 用例目录平级的 logs/<用例名>/<时间戳>/（cmd_run 规则）
     mock = MockCanDriver()
     run_cli(["run", "tc"], ecu=mock, cfg_name="n60/n60.yaml",
             tc_name="t1lfl1/dem_read/dem_read.yaml")
-    case_dir = tmp_path / "t1lfl1" / "dem_read"
-    assert any(p.is_dir() and p != case_dir for p in case_dir.iterdir()), \
-        "用例文件夹下未生成时间戳运行目录"
+    logs_dir = tmp_path / "t1lfl1" / "logs" / "dem_read"
+    assert logs_dir.is_dir(), "未生成 logs/<用例名>/ 目录"
+    assert any(p.is_dir() for p in logs_dir.iterdir()), \
+        "logs/<用例名>/ 下未生成时间戳运行目录"
 
 
 def test_probe_log_dir_uses_project(run_cli, tmp_path):
