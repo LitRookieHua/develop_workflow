@@ -1,4 +1,8 @@
-"""连接会话：driver→recorder→transport→uds 生命周期 + 3E80 会话保持。"""
+"""连接会话：driver→recorder→transport→uds 生命周期 + 3E80 会话保持。
+
+导入约定：本模块以 tools/dt_ui 为根（from ui.session import ...），且要求
+tools/DiagnosticTester 在 sys.path 上（由 UI 入口脚本 DiagnosticTesterUI.py 注入）。
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -57,7 +61,7 @@ class UiSession(QObject):
 
     @property
     def is_fd(self) -> bool:
-        return bool(self.cfg["can"]["fd"])
+        return bool(self.cfg["can"]["fd"]) if self.cfg else False
 
     @property
     def functional_id(self):
@@ -68,6 +72,7 @@ class UiSession(QObject):
             return
         cfg = load_config(config_path)
         driver = make_driver(cfg)
+        transport = rec = uds = None
         try:
             project = config_project(config_path)
             run_dir = new_run_dir(LOGS_DIR, prefix=f"{project}_ui")
@@ -76,7 +81,12 @@ class UiSession(QObject):
             uds = UdsClient(transport, p2_ms=cfg["timing"]["p2_ms"],
                             p2star_ms=cfg["timing"]["p2star_ms"])
         except Exception:
-            driver.close()  # 半链失败不泄漏设备句柄
+            # 半链失败按逆序收尾，不泄漏 pump 线程/记录文件/设备句柄
+            if transport is not None:
+                transport.stop()
+            if rec is not None:
+                rec.close()
+            driver.close()
             raise
         self.cfg = cfg
         self._project = project
