@@ -254,7 +254,7 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir, log_hook=None,
              should_stop=None):
     """执行流程，返回汇总 dict（total/pass/fail/timeout）。driver 为已就绪的 CanDriver。
 
-    log_hook(msg)：事件 tee 回调，与 run.log 落盘同时发生（UI 日志流用，缺省不启用）。
+    log_hook(msg)：事件 tee 回调，与 run.log 落盘同时发生（UI 日志流用，缺省不启用）。注意：log_hook 可能被流程线程与 IsoTpTransport pump 接收线程并发调用，须线程安全且不阻塞（UI 用 Qt signal emit 转发）。
     should_stop()：每步开始前检查，True 则中止流程，已执行步骤照常汇总（UI 停止按钮用）。
     两参数均可选，缺省时行为与原 CLI 完全一致。
     """

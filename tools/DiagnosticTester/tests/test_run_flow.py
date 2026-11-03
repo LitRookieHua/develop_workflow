@@ -241,7 +241,7 @@ def test_security_step_seed_timeout_fail(tmp_path):
 
 
 def test_log_hook_tees_events(tmp_path):
-    # log_hook 与 run.log 落盘同时发生（tee 而非替代），事件顺序完整
+    # hook 与 run.log 落盘同时发生（tee 而非替代）
     cfg, tc = load(tmp_path)
     mock = MockCanDriver()
 
@@ -260,7 +260,9 @@ def test_log_hook_tees_events(tmp_path):
     assert any("Flow start" in e for e in events)
     assert any("UDS TX: 1003" in e for e in events)
     assert any("Result: PASS" in e for e in events)
-    assert (tmp_path / "run.log").exists()  # hook 不影响落盘
+    assert any("Flow finished" in e for e in events)  # 结束汇总也经 hook
+    log_text = (tmp_path / "run.log").read_text(encoding="utf-8")
+    assert "UDS TX: 1003" in log_text  # tee 而非替代：落盘内容完整
 
 
 def test_should_stop_before_any_step(tmp_path):
