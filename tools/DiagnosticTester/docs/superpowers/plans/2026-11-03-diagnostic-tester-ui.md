@@ -1101,8 +1101,6 @@ class MainWindow(QMainWindow):
             self._append_log(f"运行异常：{res}")
             return
         self._routine_tab.set_result(res, run_dir)
-        self._append_log(f"Flow finished: PASS {res['pass']} / FAIL {res['fail']}"
-                         f" / TIMEOUT {res['timeout']} / total {res['total']}")
         ok = res["fail"] == 0 and res["timeout"] == 0
         self.statusBar().showMessage("运行完成" if ok else "存在失败/超时步骤")
 
