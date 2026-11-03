@@ -28,7 +28,7 @@ def scan_configs(configs_dir) -> list[tuple[str, Path]]:
 def scan_routines(testcase_root, project: str) -> list[tuple[str, Path]]:
     """扫 testcase/<项目>/ 下全部用例 yaml（含子目录），返回 (显示名, 路径) 列表。
 
-    显示名 = 相对 testcase_root 的路径去 .yaml；项目目录不存在返回 []。
+    显示名 = 相对 testcase_root/<项目> 的路径去 .yaml；项目目录不存在返回 []。
     """
     root = Path(testcase_root)
     base = root / project
@@ -36,6 +36,6 @@ def scan_routines(testcase_root, project: str) -> list[tuple[str, Path]]:
         return []
     out = []
     for p in base.rglob("*.yaml"):
-        rel = p.relative_to(root).with_suffix("")
+        rel = p.relative_to(base).with_suffix("")
         out.append((rel.as_posix(), p))
     return sorted(out)
