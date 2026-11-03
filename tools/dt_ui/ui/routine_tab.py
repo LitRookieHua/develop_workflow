@@ -76,6 +76,10 @@ class RoutineTab(QWidget):
             b.setEnabled(not running)
         self._btn_stop.setEnabled(running)
 
+    def set_dem_busy(self, busy: bool):
+        """DTC 读取运行期间只锁读DTC按钮（不动停止按钮，停止只作用于例程）。"""
+        self._btn_dem.setEnabled(not busy)
+
     def set_status(self, text: str):
         self._label.setText(text)
 

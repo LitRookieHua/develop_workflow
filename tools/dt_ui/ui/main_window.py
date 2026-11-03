@@ -132,7 +132,9 @@ class MainWindow(QMainWindow):
         return page, view, chk
 
     def _append_log(self, msg: str):
-        self._log_view.appendPlainText(f"[{time.strftime('%H:%M:%S')}] {msg}")
+        # dem 分节空行不加时间戳，保持与 CLI rec.blank() 一致的视觉分隔
+        self._log_view.appendPlainText(
+            f"[{time.strftime('%H:%M:%S')}] {msg}" if msg else "")
         if self._chk_log.isChecked():
             sb = self._log_view.verticalScrollBar()
             sb.setValue(sb.maximum())
@@ -365,6 +367,8 @@ class MainWindow(QMainWindow):
             return run_dem(uds, maps, self.log_line.emit, unlock=unlock)
 
         self._single_tab.set_busy(True)
+        self._routine_tab.set_dem_busy(True)
+        self._btn_connect.setEnabled(False)
         self._single_thread = FuncThread("dem", job, self)
         self._single_thread.done.connect(lambda _n, res: self._dem_done(res))
         self._single_thread.start()
@@ -372,6 +376,8 @@ class MainWindow(QMainWindow):
     def _dem_done(self, res):
         self._single_thread = None
         self._single_tab.set_busy(not self._session.connected)
+        self._routine_tab.set_dem_busy(False)
+        self._btn_connect.setEnabled(True)
         if isinstance(res, Exception):
             self._append_log(f"DTC 读取异常：{res}")
             self.statusBar().showMessage(f"DTC 读取异常：{res}", 5000)

@@ -155,5 +155,7 @@ class UiSession(QObject):
             self._timer.stop()
             self.keepalive_failed.emit(f"3E80 发送失败：{e}（会话保持已自动停止）")
             return
+        # 落 BLF 与报文页保持同源：只 tee 给 UI 不落盘会造成两处证据不一致
+        self._rec.frame(frame, False)
         self.frame_received.emit(frame, False)
         self.log_line.emit(f"会话保持 3E80 → functional 0x{self.functional_id:03X}")
