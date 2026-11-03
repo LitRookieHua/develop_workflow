@@ -186,7 +186,7 @@ git commit -m "feat(diag_test): add log_hook and should_stop options to run_flow
 `tools/dt_ui/tests/test_scan.py`：
 
 ```python
-from scan import scan_configs
+from ui.scan import scan_configs
 
 
 def test_scan_configs_root_and_nested(tmp_path):
@@ -296,7 +296,7 @@ git commit -m "feat(dt_ui): add config and testcase scanning helpers"
 
 - [ ] **Step 1: 追加失败测试**
 
-`tools/dt_ui/tests/test_scan.py` 追加（import 行改为 `from scan import scan_configs, scan_routines`）：
+`tools/dt_ui/tests/test_scan.py` 追加（import 行改为 `from ui.scan import scan_configs, scan_routines`）：
 
 ```python
 def test_scan_routines_lists_yaml_recursive(tmp_path):
@@ -344,7 +344,7 @@ git commit -m "test(dt_ui): cover recursive testcase scanning"
 `tools/dt_ui/tests/test_keepalive.py`：
 
 ```python
-from keepalive import clamp_period_ms, keepalive_frame
+from ui.keepalive import clamp_period_ms, keepalive_frame
 
 
 def test_keepalive_frame_classic():
