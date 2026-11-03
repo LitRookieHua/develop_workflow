@@ -2,6 +2,9 @@
 
 日期：2026-11-03
 状态：已确认
+修订：2026-11-03 增补三项——底部 Log 面板改为「日志/报文」双 Tab（原始 CAN 帧
+视图）、例程运行 Tab 增加「读DTC」、例程运行期间挂起会话 transport（修复双
+pump 抢帧导致 UI 跑例程间歇超时的问题）。详见 §3/§4/§5 修订处。
 
 ## 背景与目标
 
@@ -68,7 +71,7 @@ tools/DiagnosticTester/
 │ │ （Tab 内容，独占中部空间）                          │   │
 │ └──────────────────────────────────────────────────┘   │
 ├────────────────────────────────────────────────────────┤
-│ Log 面板（两 Tab 共享，只读等宽，[时间戳] 前缀，自动滚动） │
+│ 底部双 Tab：【日志】｜【报文】（各自独立自动滚动/清空）      │
 ├────────────────────────────────────────────────────────┤
 │ 状态栏：状态 | 本次会话落盘目录                           │
 └────────────────────────────────────────────────────────┘
@@ -80,12 +83,17 @@ tools/DiagnosticTester/
 - **例程运行 Tab**：例程树（根目录 `<DiagnosticTester>/testcase/`，与 CLI 默认
   用法一致；工具条提供「浏览」可选任意目录或单个 yaml 文件兜底），按当前配置
   项目名过滤显示 `testcase/<项目>/` + 刷新 +
-  运行 + 停止 + 结果汇总（PASS/FAIL/TIMEOUT、当前步骤、run_dir 路径）+
+  运行 + 停止 + **读DTC** + 结果汇总（PASS/FAIL/TIMEOUT、当前步骤、run_dir 路径）+
   「打开运行目录」（explorer）
 - **单发调试 Tab**：TX hex 输入 + 发送（Enter 触发）+ 解锁等级下拉（配置
   security 节 + 内置 develop）+ 解锁按钮 + 收发历史表（时间/TX/RX/NRC/耗时，
   双击回填 TX）
-- **Log 面板**：QPlainTextEdit，行格式与 run.log 一致；暂停自动滚动 / 清空按钮
+- **日志 Tab**：QPlainTextEdit，行格式与 run.log 一致；自动滚动开关 / 清空按钮
+- **报文 Tab**（修订新增）：诊断总线**原始 CAN 帧逐行显示，不做 UDS 层转换**。
+  行格式 `[hh:mm:ss.mmm] TX|RX <ID> <SF|FF|CF|FC> <hex data>`；数据源为
+  IsoTpTransport 的 tap 回调（pump/sender 线程 emit，主线程渲染），功能寻址
+  直发帧与 3E80 保活帧同样进此页；与 trace.blf 落盘同源。自动滚动 / 清空独立于
+  日志 Tab
 
 ## 4. 功能行为
 
@@ -99,9 +107,32 @@ transport.stop → recorder.close → driver.close 逆序收尾。切换配置�
 
 - worker 线程调 `run_flow`；run_dir 规则与 CLI `run` 一致：
   `<用例目录>/../logs/<用例名>/<时间戳>/`
-- 事件流经 log_hook 实时进 UI Log 面板（同时照常落盘）
+- **运行前挂起会话 transport**（suspend_transport），结束后重建
+  （resume_transport）：run_flow 会自建 pump 独占 driver RX，若不挂起则
+  双 pump 在 driver.recv() 上抢帧导致响应间歇丢失（实测 t09 用例 UI 超时、
+  CLI 全过的根因）
+- 事件流经 log_hook 实时进 UI 日志 Tab（同时照常落盘）；原始帧经 frame_hook
+  实时进报文 Tab（同时照常落 BLF）
 - 停止按钮置位 threading.Event，`run_flow` 每步开始前检查，当前步完成后中止
   （不强杀线程）；已执行步骤计数照常汇总
+
+### 报文页（修订新增）
+
+- 数据源：IsoTpTransport tap（会话链路与 run_flow 自建链路都接
+  frame_hook → Qt signal）、功能寻址直发帧、3E80 保活帧
+- 只显示原始 CAN 帧行（`framefmt.format_frame_line`），不做 UDS 请求/响应
+  解析转换；SF/FF/CF/FC 按首字节高半字节分类（FD 0x00 转义按 SF）
+- 与 trace.blf 同源同时落盘（tap tee），证据链一致
+
+### DTC 读取（修订新增）
+
+- 例程运行 Tab「读DTC」按钮：worker 线程调 `dem.run_dem(uds, maps, emit,
+  unlock=develop)`，maps 从当前配置目录加载（dtc_map/event_map/fimfid_map/
+  dem_dids.yaml）
+- 序列：10 03 进扩展会话 → develop 解锁（失败记日志、不阻断后续读取）→
+  19 02 0F + 3 个 event DID + fimfid 读取
+- 运行期间读DTC/连接按钮禁用（防止断开拆掉 worker 脚下的链路）；结果状态栏
+  汇总（0=全过，非 0=部分项失败）
 
 ### 单发
 
@@ -116,16 +147,19 @@ transport.stop → recorder.close → driver.close 逆序收尾。切换配置�
   不等待）
 - 周期可调默认 2500ms；仅连接后可开，断开自动停
 - 配置无 `functional_id` 时开关禁用并提示
-- 每次发送记一行日志
+- 每次发送落 BLF + 报文页一行 + 日志一行（三处同源）
 
 ## 5. 对现有代码的改动
 
-仅 `flow.py` 的 `run_flow` 新增两个可选参数（缺省行为与现状完全一致，CLI 零影响）：
+全部为可选参数追加，缺省行为与现状完全一致，CLI 零影响：
 
-- `log_hook=None`：每次事件（rec.event 时机）同步回调，供 UI tee 日志流
-- `should_stop=None`：每步开始前调用，返回 True 则中止流程并照常汇总
+- `flow.py` `run_flow`：`log_hook`（事件 tee）、`should_stop`（步间中止）、
+  `frame_hook`（原始帧 tee，修订新增）
+- `DiagnosticTester.py` `build_transport`：`frame_hook`（tap tee，修订新增）
+- `dem.py` `run_dem`：`unlock=None` 可选参数（修订新增：给定 SecLevel 时在
+  10 03 后、DTC 读取前执行 perform_unlock，失败不阻断）
 
-其余模块（isotp/uds/security/dem/can_driver/recorder/DiagnosticTester.py）零改动。
+其余模块（isotp/uds/security/can_driver/recorder）零改动。
 
 ## 6. 错误处理
 
@@ -150,6 +184,6 @@ transport.stop → recorder.close → driver.close 逆序收尾。切换配置�
 
 ## 8. 非目标（本次不做）
 
-- dem / dem-map 的 UI 化（CLI 保留可用）
+- dem map 的编辑/维护 UI（DTC 读取本身已入 UI，map yaml 仍由 CLI/手工维护）
 - 多 ECU 并行会话、GUI 里的用例编辑器
 - 打包成 exe（直接 python 启动）

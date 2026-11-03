@@ -1458,3 +1458,25 @@ Expected: 合并完成、master 上全量测试通过。`feature/dt-ui` 分支�
 - **Spec 覆盖**：§1 架构/合并流程→Task 1/13；§2 线程模型→Task 6/7/10；§3 界面结构→Task 8/9/10；§4 功能行为（连接/例程/单发/3E80）→Task 6/10/12；§5 run_flow 改动→Task 2；§6 错误处理→Task 6/10（弹窗/状态栏/信号）+ Task 10 closeEvent；§7 测试→Task 2-5/12/13；§8 非目标未引入。
 - **占位符**：无 TBD/TODO；所有代码步骤均含完整代码。
 - **类型一致性**：`scan_configs`/`scan_routines` 返回 `list[tuple[str, Path]]`（Task 3/4 测试与 Task 10 使用一致）；`keepalive_frame(functional_id, is_fd) -> CanFrame`（Task 5/6 一致）；`FuncThread(name, fn, parent)` + `done(str, object)`（Task 7/10 一致）；`UiSession.cfg/driver/uds/project/functional_id/is_fd/run_dir`（Task 6 定义与 Task 10 使用一致）；`RoutineTab.set_entries/add_entry/set_running/set_status/set_result`、`SingleShotTab.set_levels/set_busy/append_history`（Task 8/9 定义与 Task 10 使用一致）。
+
+---
+
+## 追加任务（2026-11-03 用户反馈与新需求）
+
+原计划 T1–T13 执行中追加的任务，记录于本节（详细规格见设计文档修订处）：
+
+- **T14（1466a17）**：`run_flow` / `build_transport` 增加可选 `frame_hook`（原始帧
+  tee，与 recorder 同步），CLI 缺省行为不变
+- **T15（56c5e27）**：`ui/framefmt.py` 原始 CAN 帧行格式化（纯逻辑，SF/FF/CF/FC
+  分类，FD 0x00 转义按 SF）
+- **T14b（c84da1f）**：`dem.run_dem` 增加可选 `unlock` 参数：10 03 后、DTC 读取前
+  执行 perform_unlock（失败不阻断，退出码 1）
+- **T16（c5a3387 + e7fdd10）**：底部「日志/报文」双 Tab（原始帧视图，不做 UDS 转换）；
+  例程 Tab「读DTC」按钮（读DTC/连接按钮任务期间禁用；3E80 同步落 BLF）
+- **459d9e0**：修复双 pump 抢帧——例程运行前 `suspend_transport`、结束后
+  `resume_transport`（UI 跑例程间歇超时、CLI 全过的根因）
+- **T17（本次提交）**：README UI 章节 + 设计文档修订同步（报文页/读DTC/
+  suspend-resume/改动清单）
+
+追加任务全部经两阶段审查（规格合规 + 代码质量）；质量审查 APPROVED，其 Important
+项（dem 任务期间可断开）与 Minor #1/#4/#5 已随 e7fdd10 修复。
