@@ -238,3 +238,51 @@ def test_security_step_seed_timeout_fail(tmp_path):
     summary = run_flow(cfg, tc, mock, tmp_path)
     assert summary == {"total": 1, "pass": 0, "fail": 1, "timeout": 0}
     assert "FAIL" in (tmp_path / "result.csv").read_text(encoding="utf-8")
+
+
+def test_log_hook_tees_events(tmp_path):
+    # log_hook 与 run.log 落盘同时发生（tee 而非替代），事件顺序完整
+    cfg, tc = load(tmp_path)
+    mock = MockCanDriver()
+
+    def on_send(frame):
+        d = frame.data
+        req = d[1:1 + d[0]]  # 按SF PCI长度截取（帧补齐到8字节）
+        if req == bytes.fromhex("1003"):
+            mock.push_rx(0x78C, bytes([4]) + bytes.fromhex("50030032"))
+        elif req == bytes.fromhex("22F195"):
+            mock.push_rx(0x78C, bytes([5]) + bytes.fromhex("62F1950102"))
+
+    mock.on_send = on_send
+    events = []
+    summary = run_flow(cfg, tc, mock, tmp_path, log_hook=events.append)
+    assert summary == {"total": 2, "pass": 2, "fail": 0, "timeout": 0}
+    assert any("Flow start" in e for e in events)
+    assert any("UDS TX: 1003" in e for e in events)
+    assert any("Result: PASS" in e for e in events)
+    assert (tmp_path / "run.log").exists()  # hook 不影响落盘
+
+
+def test_should_stop_before_any_step(tmp_path):
+    # 每步开始前检查：恒 True → 一步不发，汇总全 0
+    cfg, tc = load(tmp_path)
+    mock = MockCanDriver()
+    summary = run_flow(cfg, tc, mock, tmp_path, should_stop=lambda: True)
+    assert summary == {"total": 0, "pass": 0, "fail": 0, "timeout": 0}
+    assert mock.sent == []
+
+
+def test_should_stop_between_steps(tmp_path):
+    # 第一步前 False、第二步前 True：第一步照常执行并 PASS，第二步不再发
+    cfg, tc = load(tmp_path)
+    mock = MockCanDriver()
+    mock.on_send = lambda f: mock.push_rx(0x78C, bytes([4]) + bytes.fromhex("50030032"))
+    calls = {"n": 0}
+
+    def should_stop():
+        calls["n"] += 1
+        return calls["n"] > 1
+
+    summary = run_flow(cfg, tc, mock, tmp_path, should_stop=should_stop)
+    assert summary == {"total": 1, "pass": 1, "fail": 0, "timeout": 0}
+    assert len(mock.sent) == 1
