@@ -10,6 +10,7 @@ from pathlib import Path
 import yaml
 
 from flow import ConfigError, parse_hex_bytes
+from security import UnlockError, perform_unlock
 
 DEFAULT_DIDS = {
     "event_current": 0x2A0D,
@@ -237,11 +238,13 @@ def _dem_bitmap(uds, maps, emit, did_key: str, table_key: str,
     return True
 
 
-def run_dem(uds, maps, emit) -> int:
+def run_dem(uds, maps, emit, unlock=None) -> int:
     """执行五项故障拉取，逐行 emit 报告；返回退出码（全正响应 0，否则 1）。
 
     先进扩展会话（10 03）：部分 ECU 默认会话下不响应 19/22（实测 t1lfl1
     上电初期即出现），失败不阻断，继续按项读取。
+    unlock 传入 SecLevel 时，会话后执行 0x27 安全解锁（UI 读DTC用：
+    目标 ECU 需 1003+解锁才应答 19/22）；解锁失败不阻断读取、退出码置 1。
     """
     emit("===== DEM 故障报告 =====")
     emit("[会话] 进扩展会话（10 03）")
@@ -253,6 +256,18 @@ def run_dem(uds, maps, emit) -> int:
         emit(f"UDS RX: {_hex(r.response)}")
     if r.timeout or r.nrc is not None:
         emit("进扩展会话失败，按默认会话继续读取")
+    unlock_ok = True
+    if unlock is not None:
+        emit("[会话] 安全解锁（0x27）")
+        try:
+            _seed, _key, result = perform_unlock(uds, unlock, log=emit)
+        except UnlockError as e:
+            emit(f"解锁失败：{e}（继续尝试读取）")
+            unlock_ok = False
+        else:
+            if not result.ok:
+                emit("解锁未成功（密钥被拒或超时，继续尝试读取）")
+                unlock_ok = False
     ok = _dem_dtc(uds, maps, emit)
     for did_key, title in [("event_current", "当前 event"),
                            ("event_cycle", "本周期 event"),
@@ -266,7 +281,7 @@ def run_dem(uds, maps, emit) -> int:
                        "当前 fimfid", "（无置位 fimfid）"):
         ok = False
     emit("=====================")
-    return 0 if ok else 1
+    return 0 if ok and unlock_ok else 1
 
 
 # 手动 map 模式的五项：标签按现场工单口径，DID 与 dem_dids.yaml 可覆盖保持一致
