@@ -78,8 +78,7 @@ class UiSession(QObject):
             run_dir = new_run_dir(LOGS_DIR, prefix=f"{project}_ui")
             rec = Recorder(run_dir)
             transport = build_transport(cfg, driver, rec)
-            uds = UdsClient(transport, p2_ms=cfg["timing"]["p2_ms"],
-                            p2star_ms=cfg["timing"]["p2star_ms"])
+            uds = self._build_uds(cfg, transport)
         except Exception:
             # 半链失败按逆序收尾，不泄漏 pump 线程/记录文件/设备句柄
             if transport is not None:
@@ -94,6 +93,30 @@ class UiSession(QObject):
         self._transport, self._uds = transport, uds
         self.log_line.emit(f"已连接 {project}，日志目录 {run_dir}")
         self.state_changed.emit(True)
+
+    @staticmethod
+    def _build_uds(cfg, transport) -> UdsClient:
+        return UdsClient(transport, p2_ms=cfg["timing"]["p2_ms"],
+                         p2star_ms=cfg["timing"]["p2star_ms"])
+
+    def suspend_transport(self) -> None:
+        """flow 运行前挂起会话 transport：run_flow 会自建 pump 独占 driver RX，
+        双 pump 并发会在 driver.recv() 上抢帧导致响应丢失。"""
+        if self._transport is not None:
+            self._transport.stop()
+        self._transport = None
+        self._uds = None
+
+    def resume_transport(self) -> None:
+        """flow 结束后重建会话链路（单发/解锁继续可用）。"""
+        if not self.connected or self._transport is not None:
+            return
+        try:
+            transport = build_transport(self.cfg, self._driver, self._rec)
+            self._transport = transport
+            self._uds = self._build_uds(self.cfg, transport)
+        except Exception as e:
+            self.log_line.emit(f"会话链路重建失败：{e}（请断开重连）")
 
     def disconnect(self) -> None:
         if not self.connected:

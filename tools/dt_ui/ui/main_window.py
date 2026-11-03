@@ -211,6 +211,8 @@ class MainWindow(QMainWindow):
         self._append_log(f"运行目录：{run_dir}")
         stop_event = threading.Event()
         self._flow_stop = stop_event
+        # 挂起会话 transport：run_flow 自建 pump 独占 driver，避免双 pump 抢响应帧
+        self._session.suspend_transport()
         cfg = self._session.cfg
         driver = self._session.driver
 
@@ -230,6 +232,7 @@ class MainWindow(QMainWindow):
     def _flow_done(self, res, run_dir):
         self._flow_thread = None
         self._flow_stop = None
+        self._session.resume_transport()
         self._routine_tab.set_running(False)
         self._single_tab.set_busy(not self._session.connected)
         self._btn_connect.setEnabled(True)
