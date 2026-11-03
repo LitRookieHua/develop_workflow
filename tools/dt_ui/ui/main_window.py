@@ -18,6 +18,7 @@ from dem import load_maps, run_dem
 from security import UnlockError, perform_unlock
 from uds import UdsResult
 
+from .background import BackgroundWidget, background_path, load_icon, load_pixmap
 from .framefmt import diagnostic_ids, format_frame_line
 from .routine_tab import RoutineTab
 from .scan import scan_configs, scan_routines
@@ -89,7 +90,11 @@ class MainWindow(QMainWindow):
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
 
-        central = QWidget()
+        bg_path = background_path(self._base)
+        icon = load_icon(bg_path)
+        if icon is not None:
+            self.setWindowIcon(icon)
+        central = BackgroundWidget(load_pixmap(bg_path))
         lay = QVBoxLayout(central)
         lay.addLayout(bar)
         lay.addWidget(splitter)

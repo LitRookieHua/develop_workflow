@@ -1482,3 +1482,6 @@ Expected: 合并完成、master 上全量测试通过。`feature/dt-ui` 分支�
 项（dem 任务期间可断开）与 Minor #1/#4/#5 已随 e7fdd10 修复。
 - **6f1d877**：报文页按 diagnostic 三 ID 过滤（用户反馈：仅显示诊断相关报文；
   isotp tap 在 rx_id 过滤前回调，故在 UI 层过滤，BLF 仍全量记录）
+- **T18（本次提交）**：主窗口背景图 + 窗口图标（用户反馈：`image/
+  shenlilinghua.png`；cover 缩放绘制、缺失静默降级，图片落位
+  DiagnosticTester/image/ 以便合并后路径不变）

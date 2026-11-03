@@ -37,6 +37,7 @@ CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
   功能寻址直发、需配置 `functional_id`）
 - 例程运行产物落盘规则与 CLI `run` 一致；连接会话另落盘
   `logs/<项目>_ui_<时间戳>/`（run.log/result.csv/trace.blf）
+- 窗口背景与图标取 `image/shenlilinghua.png`（存在即生效，缺失自动降级为默认外观）
 - CLI 六命令不受影响；「运行中」时单发/解锁/换配置被禁用，「停止」在当前步完成后中止
 
 ## 目录结构
