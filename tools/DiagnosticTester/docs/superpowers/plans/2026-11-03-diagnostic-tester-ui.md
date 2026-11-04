@@ -1494,3 +1494,5 @@ Expected: 合并完成、master 上全量测试通过。`feature/dt-ui` 分支�
 - **T21（本次提交）**：布局微调（用户反馈：日志/报文双 Tab 底部通栏，不再只占
   左半；例程列表/收发历史/日志/报文视图半透明 rgba 白 200，Tab 面板透明，
   透出背景图且文字可读）
+- **T22（本次提交）**：背景图换为 Konachan.com-mikasa.jpg（用户指定；文件名收敛
+  为 background.py 的 BACKGROUND_FILE 常量，换图只改一处）

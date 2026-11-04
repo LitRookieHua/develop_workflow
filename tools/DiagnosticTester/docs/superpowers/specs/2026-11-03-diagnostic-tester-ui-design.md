@@ -4,7 +4,8 @@
 状态：已确认
 修订：2026-11-03 增补六项——底部 Log 面板改为「日志/报文」双 Tab（原始 CAN 帧
 视图，仅 diagnostic 三 ID）、例程运行期间挂起会话 transport（修复双 pump 抢帧
-导致 UI 跑例程间歇超时的问题）、主窗口背景图与图标（`image/shenlilinghua.png`，
+导致 UI 跑例程间歇超时的问题）、主窗口背景图与图标（现为
+`image/Konachan.com-mikasa.jpg`，文件名见 ui/background.py BACKGROUND_FILE，
 缺失自动降级）、中部 Tab 重组为「手动发送 / 固定例程 / 配置例程」三页（安全
 解锁与读DTC 归入固定例程，新增会话切换）、布局改版（例程三 Tab 左半·上 2/5，
 右上留空显背景；日志/报文底部通栏·下 3/5；例程列表/收发历史/日志/报文视图
