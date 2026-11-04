@@ -12,6 +12,7 @@ SESSIONS = (
     ("扩展会话 10 03", "1003"),
     ("编程会话 10 02", "1002"),
 )
+DEFAULT_SESSION = "1003"
 
 
 class FixedRoutinesTab(QWidget):
@@ -24,7 +25,8 @@ class FixedRoutinesTab(QWidget):
         self._combo_session = QComboBox()
         for label, req in SESSIONS:
             self._combo_session.addItem(label, req)
-        self._combo_session.setCurrentIndex(1)  # 默认 10 03
+        self._combo_session.setCurrentIndex(
+            self._combo_session.findData(DEFAULT_SESSION))
         self._btn_session = QPushButton("切换")
         self._combo_level = QComboBox()
         self._btn_unlock = QPushButton("解锁")

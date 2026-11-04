@@ -38,8 +38,10 @@ def test_tab_signals_and_busy():
     assert not tab._btn_unlock.isEnabled()
     assert not tab._btn_dem.isEnabled()
     assert not tab._combo_session.isEnabled()
+    assert not tab._combo_level.isEnabled()
     tab.set_busy(False)
     assert tab._btn_dem.isEnabled()
+    assert tab._combo_level.isEnabled()
 
     tab.set_status("done")
     assert tab._label.text() == "done"

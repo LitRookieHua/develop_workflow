@@ -185,6 +185,7 @@ class MainWindow(QMainWindow):
             self._fixed_tab.set_levels(self._session.cfg["security_levels"])
             self._single_tab.set_busy(False)
             self._fixed_tab.set_busy(False)
+            self._fixed_tab.set_status("已连接")
             has_fid = self._session.functional_id is not None
             self._chk_keepalive.setEnabled(has_fid)
             self._spin_period.setEnabled(has_fid)
@@ -361,13 +362,13 @@ class MainWindow(QMainWindow):
     def _session_done(self, req, res):
         self._single_thread = None
         self._set_tabs_busy(not self._session.connected)
+        self._append_log(f"UDS TX: {req.hex().upper()}")
         if isinstance(res, Exception):
             self._fixed_tab.set_status(f"会话切换异常：{res}")
             self._append_log(f"会话切换异常：{res}")
             return
         r: UdsResult = res
         rx = r.response.hex().upper() if r.response else "(timeout)"
-        self._append_log(f"UDS TX: {req.hex().upper()}")
         self._append_log(
             f"UDS RX: {rx}"
             + (f"（NRC 0x{r.nrc:02X}）" if r.nrc is not None else "")
