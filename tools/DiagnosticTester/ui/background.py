@@ -1,6 +1,6 @@
 """主窗口背景图与窗口图标：cover 缩放绘制（保持比例、可对齐边角裁剪）。
 
-图片路径 <base>/image/<BACKGROUND_FILE>，缺失或损坏时静默降级（无背景/默认图标）。
+图片路径 <本模块目录>/image/<BACKGROUND_FILE>，缺失或损坏时静默降级（无背景/默认图标）。
 """
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from PySide6.QtWidgets import QWidget
 BACKGROUND_FILE = "mikasa.jpg"
 
 
-def background_path(base_dir: Path) -> Path:
-    return Path(base_dir) / "image" / BACKGROUND_FILE
+def background_path() -> Path:
+    return Path(__file__).resolve().parent / "image" / BACKGROUND_FILE
 
 
 def load_pixmap(path: Path) -> QPixmap | None:

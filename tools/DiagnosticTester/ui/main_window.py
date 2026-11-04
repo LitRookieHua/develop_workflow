@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
         grid.setRowStretch(0, 2)
         grid.setRowStretch(1, 3)
 
-        bg_path = background_path(self._base)
+        bg_path = background_path()
         icon = load_icon(bg_path)
         if icon is not None:
             self.setWindowIcon(icon)
