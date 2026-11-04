@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QComboBox, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout,
+    QWidget,
 )
 
 # 下拉顺序即展示顺序；默认选中扩展会话（解锁/读DTC 等前置步骤最常用）
@@ -23,12 +24,21 @@ class FixedRoutinesTab(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._combo_session = QComboBox()
+        # 按内容自适应宽度，不随半宽窗口拉伸
+        self._combo_session.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self._combo_session.setSizePolicy(QSizePolicy.Policy.Maximum,
+                                          QSizePolicy.Policy.Fixed)
         for label, req in SESSIONS:
             self._combo_session.addItem(label, req)
         self._combo_session.setCurrentIndex(
             self._combo_session.findData(DEFAULT_SESSION))
         self._btn_session = QPushButton("切换")
         self._combo_level = QComboBox()
+        self._combo_level.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self._combo_level.setSizePolicy(QSizePolicy.Policy.Maximum,
+                                        QSizePolicy.Policy.Fixed)
         self._btn_unlock = QPushButton("解锁")
         self._btn_dem = QPushButton("读取")
         self._btn_dem.setToolTip(
@@ -36,14 +46,17 @@ class FixedRoutinesTab(QWidget):
         self._label = QLabel("（未连接）")
         self._label.setWordWrap(True)
 
+        # 下拉框按内容自适应宽度（不随半宽窗口拉伸）
         r1 = QHBoxLayout()
         r1.addWidget(QLabel("会话切换"))
-        r1.addWidget(self._combo_session, 1)
+        r1.addWidget(self._combo_session)
         r1.addWidget(self._btn_session)
+        r1.addStretch(1)
         r2 = QHBoxLayout()
         r2.addWidget(QLabel("安全解锁（0x27）"))
-        r2.addWidget(self._combo_level, 1)
+        r2.addWidget(self._combo_level)
         r2.addWidget(self._btn_unlock)
+        r2.addStretch(1)
         r3 = QHBoxLayout()
         r3.addWidget(QLabel("读取DTC"))
         r3.addWidget(self._btn_dem)

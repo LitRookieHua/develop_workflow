@@ -5,12 +5,12 @@ import threading
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QLabel, QMainWindow,
-    QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QTabWidget,
-    QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout, QLabel,
+    QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox,
+    QTabWidget, QVBoxLayout, QWidget,
 )
 
 from flow import ConfigError, load_testcase, parse_hex_bytes, run_flow
@@ -88,20 +88,24 @@ class MainWindow(QMainWindow):
         view_tabs.addTab(log_page, "日志")
         view_tabs.addTab(frame_page, "报文")
 
-        splitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.addWidget(tabs)
-        splitter.addWidget(view_tabs)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 1)
+        # 左列：例程三 Tab（上 2/5）+ 日志/报文（下 3/5）；右列留空透出背景
+        grid = QGridLayout()
+        grid.addWidget(tabs, 0, 0)
+        grid.addWidget(view_tabs, 1, 0)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+        grid.setRowStretch(0, 2)
+        grid.setRowStretch(1, 3)
 
         bg_path = background_path(self._base)
         icon = load_icon(bg_path)
         if icon is not None:
             self.setWindowIcon(icon)
-        central = BackgroundWidget(load_pixmap(bg_path))
+        central = BackgroundWidget(load_pixmap(bg_path),
+                                   h_align="right", v_align="top")
         lay = QVBoxLayout(central)
         lay.addLayout(bar)
-        lay.addWidget(splitter)
+        lay.addLayout(grid)
         self.setCentralWidget(central)
         self.statusBar().showMessage("就绪")
 

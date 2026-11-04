@@ -1,4 +1,4 @@
-"""主窗口背景图与窗口图标：cover 缩放绘制（保持比例、居中裁剪填满）。
+"""主窗口背景图与窗口图标：cover 缩放绘制（保持比例、可对齐边角裁剪）。
 
 图片路径 <base>/image/shenlilinghua.png，缺失或损坏时静默降级（无背景/默认图标）。
 """
@@ -28,21 +28,27 @@ def load_icon(path: Path) -> QIcon | None:
     return QIcon(pix) if pix is not None else None
 
 
-def cover_rect(pix_w: int, pix_h: int, w: int, h: int) -> QRectF:
-    """等比缩放至完全覆盖 (w, h)，居中裁剪；非法尺寸返回零矩形。"""
+def cover_rect(pix_w: int, pix_h: int, w: int, h: int,
+               h_align: str = "center", v_align: str = "center") -> QRectF:
+    """等比缩放至完全覆盖 (w, h)，按 h_align/v_align 对齐裁剪；非法尺寸返回零矩形。"""
     if pix_w <= 0 or pix_h <= 0 or w <= 0 or h <= 0:
         return QRectF(0, 0, 0, 0)
     scale = max(w / pix_w, h / pix_h)
     dw, dh = pix_w * scale, pix_h * scale
-    return QRectF((w - dw) / 2, (h - dh) / 2, dw, dh)
+    x = {"left": 0.0, "center": (w - dw) / 2, "right": w - dw}[h_align]
+    y = {"top": 0.0, "center": (h - dh) / 2, "bottom": h - dh}[v_align]
+    return QRectF(x, y, dw, dh)
 
 
 class BackgroundWidget(QWidget):
-    """中央容器：背景图 cover 填满；子控件各自不透明，背景显示在控件间隙。"""
+    """中央容器：背景图 cover 填满；子控件各自不透明，背景显示在控件间隙与留白区。"""
 
-    def __init__(self, pixmap: QPixmap | None, parent=None):
+    def __init__(self, pixmap: QPixmap | None,
+                 h_align: str = "center", v_align: str = "center", parent=None):
         super().__init__(parent)
         self._pixmap = pixmap
+        self._h_align = h_align
+        self._v_align = v_align
 
     def paintEvent(self, event):
         if (self._pixmap is not None and not self._pixmap.isNull()
@@ -50,7 +56,8 @@ class BackgroundWidget(QWidget):
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             rect = cover_rect(self._pixmap.width(), self._pixmap.height(),
-                              self.width(), self.height())
+                              self.width(), self.height(),
+                              self._h_align, self._v_align)
             src = QRectF(0.0, 0.0, float(self._pixmap.width()),
                          float(self._pixmap.height()))
             painter.drawPixmap(rect, self._pixmap, src)
