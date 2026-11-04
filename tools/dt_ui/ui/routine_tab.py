@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout, QWidget,
 )
 
+from .background import make_translucent
+
 
 class RoutineTab(QWidget):
     run_requested = Signal(object)  # Path：选中的用例 yaml
@@ -21,6 +23,7 @@ class RoutineTab(QWidget):
         self._entries: list[Path] = []
         self._run_dir: Path | None = None
         self._list = QListWidget()
+        make_translucent(self._list)
         self._btn_refresh = QPushButton("刷新")
         self._btn_browse = QPushButton("浏览…")
         self._btn_run = QPushButton("运行")

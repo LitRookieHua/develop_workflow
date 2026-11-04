@@ -28,6 +28,19 @@ def load_icon(path: Path) -> QIcon | None:
     return QIcon(pix) if pix is not None else None
 
 
+# 半透明面板（约 78% 不透明白）：背景图透出、文字仍可读
+TRANSLUCENT_BG = "rgba(255, 255, 255, 200)"
+# QTabWidget 面板透明化：页面区透出背景，仅保留淡边框
+TAB_PANE_STYLE = ("QTabWidget::pane { background: transparent;"
+                  " border: 1px solid rgba(120, 120, 120, 150); }")
+
+
+def make_translucent(widget) -> None:
+    """给内容视图（列表/表格/文本）套半透明背景样式。"""
+    cls = widget.metaObject().className()
+    widget.setStyleSheet(f"{cls} {{ background-color: {TRANSLUCENT_BG}; }}")
+
+
 def cover_rect(pix_w: int, pix_h: int, w: int, h: int,
                h_align: str = "center", v_align: str = "center") -> QRectF:
     """等比缩放至完全覆盖 (w, h)，按 h_align/v_align 对齐裁剪；非法尺寸返回零矩形。"""

@@ -8,6 +8,8 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from .background import make_translucent
+
 _COLS = ("时间", "TX", "RX", "NRC", "耗时")
 
 
@@ -22,6 +24,7 @@ class SingleShotTab(QWidget):
         self._btn_send = QPushButton("发送")
 
         self._history = QTableWidget(0, len(_COLS))
+        make_translucent(self._history)
         self._history.setHorizontalHeaderLabels(list(_COLS))
         self._history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._history.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)

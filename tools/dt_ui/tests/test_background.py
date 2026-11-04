@@ -1,6 +1,7 @@
 from PySide6.QtCore import QRectF
+from PySide6.QtWidgets import QApplication, QPlainTextEdit
 
-from ui.background import cover_rect, load_pixmap
+from ui.background import cover_rect, load_pixmap, make_translucent
 
 
 def test_cover_rect_wide_target_crops_portrait_sides():
@@ -39,3 +40,11 @@ def test_cover_rect_align_left_bottom():
 
 def test_load_pixmap_missing_file_returns_none(tmp_path):
     assert load_pixmap(tmp_path / "nope.png") is None
+
+
+def test_make_translucent_targets_widget_class():
+    app = QApplication.instance() or QApplication([])
+    view = QPlainTextEdit()
+    make_translucent(view)
+    assert "QPlainTextEdit" in view.styleSheet()
+    assert "rgba(255, 255, 255, 200)" in view.styleSheet()

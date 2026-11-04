@@ -18,7 +18,8 @@ from dem import load_maps, run_dem
 from security import UnlockError, perform_unlock
 from uds import UdsResult
 
-from .background import BackgroundWidget, background_path, load_icon, load_pixmap
+from .background import (BackgroundWidget, TAB_PANE_STYLE, background_path,
+                         load_icon, load_pixmap, make_translucent)
 from .fixed_routines_tab import FixedRoutinesTab
 from .framefmt import diagnostic_ids, format_frame_line
 from .routine_tab import RoutineTab
@@ -80,6 +81,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(self._single_tab, "手动发送")
         tabs.addTab(self._fixed_tab, "固定例程")
         tabs.addTab(self._routine_tab, "配置例程")
+        tabs.setStyleSheet(TAB_PANE_STYLE)
 
         # 底部：日志/报文 双 Tab（各自独立自动滚动/清空）
         log_page, self._log_view, self._chk_log = self._make_view("日志")
@@ -87,11 +89,12 @@ class MainWindow(QMainWindow):
         view_tabs = QTabWidget()
         view_tabs.addTab(log_page, "日志")
         view_tabs.addTab(frame_page, "报文")
+        view_tabs.setStyleSheet(TAB_PANE_STYLE)
 
-        # 左列：例程三 Tab（上 2/5）+ 日志/报文（下 3/5）；右列留空透出背景
+        # 例程三 Tab 占左半·上 2/5（右上留空显背景），日志/报文底部通栏·下 3/5
         grid = QGridLayout()
         grid.addWidget(tabs, 0, 0)
-        grid.addWidget(view_tabs, 1, 0)
+        grid.addWidget(view_tabs, 1, 0, 1, 2)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
         grid.setRowStretch(0, 2)
@@ -130,6 +133,7 @@ class MainWindow(QMainWindow):
         view.setReadOnly(True)
         view.setMaximumBlockCount(5000)
         view.setFont(QFont("Consolas"))
+        make_translucent(view)
         chk = QCheckBox("自动滚动")
         chk.setChecked(True)
         btn = QPushButton("清空")
