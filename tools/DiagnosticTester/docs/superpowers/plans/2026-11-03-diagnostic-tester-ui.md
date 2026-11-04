@@ -186,7 +186,7 @@ git commit -m "feat(diag_test): add log_hook and should_stop options to run_flow
 `tools/dt_ui/tests/test_scan.py`：
 
 ```python
-from scan import scan_configs
+from ui.scan import scan_configs
 
 
 def test_scan_configs_root_and_nested(tmp_path):
@@ -258,7 +258,7 @@ def scan_configs(configs_dir) -> list[tuple[str, Path]]:
 def scan_routines(testcase_root, project: str) -> list[tuple[str, Path]]:
     """扫 testcase/<项目>/ 下全部用例 yaml（含子目录），返回 (显示名, 路径) 列表。
 
-    显示名 = 相对 testcase_root 的路径去 .yaml；项目目录不存在返回 []。
+    显示名 = 相对 testcase_root/<项目> 的路径去 .yaml；项目目录不存在返回 []。
     """
     root = Path(testcase_root)
     base = root / project
@@ -266,7 +266,7 @@ def scan_routines(testcase_root, project: str) -> list[tuple[str, Path]]:
         return []
     out = []
     for p in base.rglob("*.yaml"):
-        rel = p.relative_to(root).with_suffix("")
+        rel = p.relative_to(base).with_suffix("")
         out.append((rel.as_posix(), p))
     return sorted(out)
 ```
@@ -296,7 +296,7 @@ git commit -m "feat(dt_ui): add config and testcase scanning helpers"
 
 - [ ] **Step 1: 追加失败测试**
 
-`tools/dt_ui/tests/test_scan.py` 追加（import 行改为 `from scan import scan_configs, scan_routines`）：
+`tools/dt_ui/tests/test_scan.py` 追加（import 行改为 `from ui.scan import scan_configs, scan_routines`）：
 
 ```python
 def test_scan_routines_lists_yaml_recursive(tmp_path):
@@ -344,7 +344,7 @@ git commit -m "test(dt_ui): cover recursive testcase scanning"
 `tools/dt_ui/tests/test_keepalive.py`：
 
 ```python
-from keepalive import clamp_period_ms, keepalive_frame
+from ui.keepalive import clamp_period_ms, keepalive_frame
 
 
 def test_keepalive_frame_classic():
@@ -433,7 +433,11 @@ git commit -m "feat(dt_ui): add 3E80 keepalive frame builder"
 `tools/dt_ui/ui/session.py`：
 
 ```python
-"""连接会话：driver→recorder→transport→uds 生命周期 + 3E80 会话保持。"""
+"""连接会话：driver→recorder→transport→uds 生命周期 + 3E80 会话保持。
+
+导入约定：本模块以 tools/dt_ui 为根（from ui.session import ...），且要求
+tools/DiagnosticTester 在 sys.path 上（由 UI 入口脚本 DiagnosticTesterUI.py 注入）。
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -492,7 +496,7 @@ class UiSession(QObject):
 
     @property
     def is_fd(self) -> bool:
-        return bool(self.cfg["can"]["fd"])
+        return bool(self.cfg["can"]["fd"]) if self.cfg else False
 
     @property
     def functional_id(self):
@@ -503,6 +507,7 @@ class UiSession(QObject):
             return
         cfg = load_config(config_path)
         driver = make_driver(cfg)
+        transport = rec = uds = None
         try:
             project = config_project(config_path)
             run_dir = new_run_dir(LOGS_DIR, prefix=f"{project}_ui")
@@ -511,7 +516,12 @@ class UiSession(QObject):
             uds = UdsClient(transport, p2_ms=cfg["timing"]["p2_ms"],
                             p2star_ms=cfg["timing"]["p2star_ms"])
         except Exception:
-            driver.close()  # 半链失败不泄漏设备句柄
+            # 半链失败按逆序收尾，不泄漏 pump 线程/记录文件/设备句柄
+            if transport is not None:
+                transport.stop()
+            if rec is not None:
+                rec.close()
+            driver.close()
             raise
         self.cfg = cfg
         self._project = project
@@ -1059,7 +1069,7 @@ class MainWindow(QMainWindow):
             self._routine_tab.add_entry(Path(p))
 
     def _run_routine(self, path):
-        if self._flow_thread is not None:
+        if self._flow_thread is not None or self._single_thread is not None:
             return
         if not self._session.connected:
             self.statusBar().showMessage("请先连接", 5000)
@@ -1101,8 +1111,6 @@ class MainWindow(QMainWindow):
             self._append_log(f"运行异常：{res}")
             return
         self._routine_tab.set_result(res, run_dir)
-        self._append_log(f"Flow finished: PASS {res['pass']} / FAIL {res['fail']}"
-                         f" / TIMEOUT {res['timeout']} / total {res['total']}")
         ok = res["fail"] == 0 and res["timeout"] == 0
         self.statusBar().showMessage("运行完成" if ok else "存在失败/超时步骤")
 
@@ -1193,9 +1201,19 @@ class MainWindow(QMainWindow):
             if self._flow_stop is not None:
                 self._flow_stop.set()
             self._append_log("关闭窗口：等待当前步骤结束（最多 2s）…")
-            self._flow_thread.wait(2000)
+            if not self._flow_thread.wait(2000):
+                _detach_later(self._flow_thread)
+        if self._single_thread is not None and self._single_thread.isRunning():
+            if not self._single_thread.wait(2000):
+                _detach_later(self._single_thread)
         self._session.disconnect()
         super().closeEvent(event)
+
+
+def _detach_later(t: FuncThread) -> None:
+    """关窗等待超时：解除父子关系并在线程结束后自毁，避免窗口析构摧毁运行中的线程。"""
+    t.setParent(None)
+    t.finished.connect(t.deleteLater)
 
 
 def new_run_dir_for(tc_path: Path) -> Path:
@@ -1440,3 +1458,42 @@ Expected: 合并完成、master 上全量测试通过。`feature/dt-ui` 分支�
 - **Spec 覆盖**：§1 架构/合并流程→Task 1/13；§2 线程模型→Task 6/7/10；§3 界面结构→Task 8/9/10；§4 功能行为（连接/例程/单发/3E80）→Task 6/10/12；§5 run_flow 改动→Task 2；§6 错误处理→Task 6/10（弹窗/状态栏/信号）+ Task 10 closeEvent；§7 测试→Task 2-5/12/13；§8 非目标未引入。
 - **占位符**：无 TBD/TODO；所有代码步骤均含完整代码。
 - **类型一致性**：`scan_configs`/`scan_routines` 返回 `list[tuple[str, Path]]`（Task 3/4 测试与 Task 10 使用一致）；`keepalive_frame(functional_id, is_fd) -> CanFrame`（Task 5/6 一致）；`FuncThread(name, fn, parent)` + `done(str, object)`（Task 7/10 一致）；`UiSession.cfg/driver/uds/project/functional_id/is_fd/run_dir`（Task 6 定义与 Task 10 使用一致）；`RoutineTab.set_entries/add_entry/set_running/set_status/set_result`、`SingleShotTab.set_levels/set_busy/append_history`（Task 8/9 定义与 Task 10 使用一致）。
+
+---
+
+## 追加任务（2026-11-03 用户反馈与新需求）
+
+原计划 T1–T13 执行中追加的任务，记录于本节（详细规格见设计文档修订处）：
+
+- **T14（1466a17）**：`run_flow` / `build_transport` 增加可选 `frame_hook`（原始帧
+  tee，与 recorder 同步），CLI 缺省行为不变
+- **T15（56c5e27）**：`ui/framefmt.py` 原始 CAN 帧行格式化（纯逻辑，SF/FF/CF/FC
+  分类，FD 0x00 转义按 SF）
+- **T14b（c84da1f）**：`dem.run_dem` 增加可选 `unlock` 参数：10 03 后、DTC 读取前
+  执行 perform_unlock（失败不阻断，退出码 1）
+- **T16（c5a3387 + e7fdd10）**：底部「日志/报文」双 Tab（原始帧视图，不做 UDS 转换）；
+  例程 Tab「读DTC」按钮（读DTC/连接按钮任务期间禁用；3E80 同步落 BLF）
+- **459d9e0**：修复双 pump 抢帧——例程运行前 `suspend_transport`、结束后
+  `resume_transport`（UI 跑例程间歇超时、CLI 全过的根因）
+- **T17（本次提交）**：README UI 章节 + 设计文档修订同步（报文页/读DTC/
+  suspend-resume/改动清单）
+
+追加任务全部经两阶段审查（规格合规 + 代码质量）；质量审查 APPROVED，其 Important
+项（dem 任务期间可断开）与 Minor #1/#4/#5 已随 e7fdd10 修复。
+- **6f1d877**：报文页按 diagnostic 三 ID 过滤（用户反馈：仅显示诊断相关报文；
+  isotp tap 在 rx_id 过滤前回调，故在 UI 层过滤，BLF 仍全量记录）
+- **T18（本次提交）**：主窗口背景图 + 窗口图标（用户反馈：`image/
+  shenlilinghua.png`；cover 缩放绘制、缺失静默降级，图片落位
+  DiagnosticTester/image/ 以便合并后路径不变）
+- **T19（本次提交）**：Tab 重组为「手动发送 / 固定例程 / 配置例程」（用户需求：
+  单发调试→手动发送并移除解锁；新建固定例程 = 会话切换 1001/1002/1003 + 安全
+  解锁 + 读DTC；例程运行→配置例程并移除读DTC）
+- **T20（本次提交）**：布局改版（用户需求：例程区不独占——三 Tab 左半·上 2/5，
+  日志/报文左半·下 3/5，右半留空透出右上对齐的背景图；固定例程下拉框改为
+  内容自适应宽度不再拉伸）
+- **T21（本次提交）**：布局微调（用户反馈：日志/报文双 Tab 底部通栏，不再只占
+  左半；例程列表/收发历史/日志/报文视图半透明 rgba 白 200，Tab 面板透明，
+  透出背景图且文字可读）
+- **T22（本次提交）**：背景图换为 Konachan.com-mikasa.jpg（用户指定；文件名收敛
+  为 background.py 的 BACKGROUND_FILE 常量，换图只改一处）
+- **T23（本次提交）**：背景图再换为 mikasa.jpg（用户指定，1712x1324）

@@ -20,6 +20,30 @@ CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
 （`vendor/cxcanfd/`，64 位，Python 须 64 位），无需另外组装 SDK。
 终端电阻无软件开关，请确认卡上拨码/跳线或外接电阻。
 
+## UI 图形界面
+
+    python -m pip install -r requirements.txt
+    python DiagnosticTesterUI.py
+
+- 工具条选配置（扫 `configs/`，一项即确定项目+卡型+诊断参数）→ 点「连接」
+- 三 Tab（顺序）：**手动发送**（hex 收发 + 历史表，双击回填，类 chat）/
+  **固定例程**（会话切换 10 01/10 03/10 02 + 安全解锁（等级下拉）+ 读DTC：
+  10 03 → develop 解锁 → 19 02 0F + event DID + fimfid，依赖配置目录下
+  dtc_map/event_map/fimfid_map/dem_dids.yaml）/
+  **配置例程**（扫 `testcase/<项目>/`，也可靠「浏览…」选任意 yaml）
+- 底部**日志 / 报文**双 Tab：日志=事件流（与 run.log 同格式）；报文=原始 CAN 帧
+  逐行显示（不做 UDS 层转换，仅 diagnostic 配置的 request/response/functional
+  三个 CAN ID，含 3E80 保活帧；总线其余流量只落 trace.blf）
+- 会话保持 3E80：连接后可开关、周期可调（默认 2500ms，
+  功能寻址直发、需配置 `functional_id`）
+- 例程运行产物落盘规则与 CLI `run` 一致；连接会话另落盘
+  `logs/<项目>_ui_<时间戳>/`（run.log/result.csv/trace.blf）
+- 布局：例程三 Tab 占左半·上 2/5（右上留空显背景），日志/报文底部通栏·下 3/5；
+  例程列表/收发历史/日志/报文视图半透明（背景图透出、文字可读）；
+  窗口背景（右上对齐）与图标取 `image/mikasa.jpg`（存在即生效，
+  缺失自动降级为默认外观）
+- CLI 六命令不受影响；「运行中」时单发/解锁/换配置被禁用，「停止」在当前步完成后中止
+
 ## 目录结构
 
     configs/                    # 项目配置（每个项目一个同名目录，目录名 = 配置文件名）

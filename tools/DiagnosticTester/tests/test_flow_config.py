@@ -215,11 +215,12 @@ def test_functional_requires_id(tmp_path):
     assert "functional_id" in str(e.value)
 
 
-def test_functional_with_expect_rejected(tmp_path):
+def test_functional_with_expect_accepted(tmp_path):
+    # 功能寻址 + expect 已支持（6aa3747）：临时切 tx_id 到 functional_id 等待响应
     text = STEPS.replace('request: "1003"', 'request: "1003", addressing: functional')
-    with pytest.raises(ConfigError) as e:
-        load(tmp_path, tc_text=text)
-    assert "expect" in str(e.value)
+    cfg, tc = load(tmp_path, tc_text=text)
+    assert tc["steps"][0].addressing == "functional"
+    assert tc["steps"][0].expect == bytes.fromhex("5003")
 
 
 def test_fd_not_bool(tmp_path):

@@ -250,8 +250,16 @@ def _result_text(verdict: str, expect: bytes | None, r: UdsResult) -> str:
     return " ".join(parts)
 
 
-def run_flow(cfg: dict, testcase: dict, driver, run_dir):
-    """执行流程，返回汇总 dict（total/pass/fail/timeout）。driver 为已就绪的 CanDriver。"""
+def run_flow(cfg: dict, testcase: dict, driver, run_dir, log_hook=None,
+             should_stop=None, frame_hook=None):
+    """执行流程，返回汇总 dict（total/pass/fail/timeout）。driver 为已就绪的 CanDriver。
+
+    log_hook(msg)：事件 tee 回调，与 run.log 落盘同时发生（UI 日志流用，缺省不启用）。注意：log_hook 可能被流程线程与 IsoTpTransport pump 接收线程并发调用，须线程安全且不阻塞（UI 用 Qt signal emit 转发）。
+    should_stop()：每步开始前检查，True 则中止流程，已执行步骤照常汇总（UI 停止按钮用）。
+    frame_hook(frame, is_rx)：原始帧 tee 回调（transport tap 同款），与 BLF 落盘同时发生。
+    与 log_hook 相同的线程约束（pump 接收线程与发送线程并发调用，须线程安全不阻塞）。
+    三参数均可选，缺省时行为与原 CLI 完全一致。
+    """
     diag = cfg["diagnostic"]
     timing = testcase["timing"]
     steps = testcase["steps"]
@@ -266,9 +274,13 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir):
     with Recorder(run_dir) as rec:
         def tap(frame, is_rx):
             rec.frame(frame, is_rx)
+            if frame_hook is not None:
+                frame_hook(frame, is_rx)
 
         def log(msg):
             rec.event(msg)
+            if log_hook is not None:
+                log_hook(msg)
 
         transport = IsoTpTransport(driver, tx_id=diag["request_id"],
                                    rx_id=diag["response_id"],
@@ -277,8 +289,11 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir):
         try:
             uds = UdsClient(transport, p2_ms=timing["p2_ms"],
                             p2star_ms=timing["p2star_ms"], log=log)
-            rec.event(f"Flow start: {len(steps)} steps, on_fail={on_fail}")
+            log(f"Flow start: {len(steps)} steps, on_fail={on_fail}")
             for i, step in enumerate(steps, 1):
+                if should_stop is not None and should_stop():
+                    log("Flow stopped by request, aborting before next step")
+                    break
                 counters["total"] += 1
                 rec.blank()
                 if step.security_access is not None:
@@ -326,6 +341,8 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir):
                                          bitrate_switch=cfg["can"]["fd"])
                         driver.send(frame)
                         rec.frame(frame, False)
+                        if frame_hook is not None:
+                            frame_hook(frame, False)
                     # 发完即记一行 SENT：CSV 行数与已执行步骤对齐、与 abort 跳过可区分
                     rec.step(i, step.name, step.addressing,
                              step.request.hex().upper(), UdsResult(), "SENT")
@@ -355,7 +372,7 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir):
                 time.sleep(delay_s(step))
         finally:
             transport.stop()
-            rec.event(f"Flow finished: PASS {counters['pass']} / FAIL {counters['fail']}"
-                      f" / TIMEOUT {counters['timeout']}"
-                      f" / total {counters['total']}/{len(steps)}")
+            log(f"Flow finished: PASS {counters['pass']} / FAIL {counters['fail']}"
+                f" / TIMEOUT {counters['timeout']}"
+                f" / total {counters['total']}/{len(steps)}")
     return counters

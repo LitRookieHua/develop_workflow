@@ -307,3 +307,46 @@ def test_run_dem_without_maps_shows_raw():
     assert "EA0788  （未在 dtc_map 中）" in text
     assert "1:（未在 event_map 中）" in text
     assert "2:（未在 fimfid_map 中）" in text
+
+
+# ---------- run_dem unlock ----------
+
+class StubLevel:
+    """develop 61/62 的鸭子类型替身：密钥 = 种子取反，避免真实 CMAC。"""
+    name = "develop"
+    seed_sub = 0x61
+    key_sub = 0x62
+    seed_len = 2
+
+    def seed_request(self):
+        return bytes.fromhex("2761")
+
+    def compute_key(self, seed):
+        return bytes(b ^ 0xFF for b in seed)
+
+
+def test_run_dem_unlock_success():
+    lines = []
+    uds = _ok_uds()
+    uds.responses[bytes.fromhex("2761")] = UdsResult(response=bytes.fromhex("6761AABB"))
+    uds.responses[bytes.fromhex("2762" + "5544")] = UdsResult(response=bytes.fromhex("6762"))
+    code = dem.run_dem(uds, _maps(), lines.append, unlock=StubLevel())
+    assert code == 0
+    assert any("安全解锁" in l for l in lines)
+    assert any("DemDTC_U2A0788" in l for l in lines)
+
+
+def test_run_dem_unlock_failure_sets_exit_code():
+    lines = []
+    uds = _ok_uds()  # 2761 未脚本化 → 超时 → UnlockError
+    code = dem.run_dem(uds, _maps(), lines.append, unlock=StubLevel())
+    assert code == 1
+    assert any("解锁失败" in l for l in lines)
+    assert any("DemDTC_U2A0788" in l for l in lines)  # 读取照常继续
+
+
+def test_run_dem_no_unlock_unchanged():
+    lines = []
+    code = dem.run_dem(_ok_uds(), _maps(), lines.append)
+    assert code == 0
+    assert not any("解锁" in l for l in lines)

@@ -101,14 +101,59 @@ def test_run_smoke(run_cli):
     assert "PASS 1 / FAIL 0 / TIMEOUT 0 / 共 1/1" in out
 
 
-def test_run_log_dir_beside_testcase_yaml(run_cli, tmp_path):
-    # run 的日志目录 = 用例 yaml 同目录下的时间戳子目录
+def test_run_log_dir_under_logs_beside_testcase(run_cli, tmp_path):
+    # run 的日志目录 = 用例目录平级的 logs/<用例名>/<时间戳>/（cmd_run 规则）
     mock = MockCanDriver()
     run_cli(["run", "tc"], ecu=mock, cfg_name="n60/n60.yaml",
             tc_name="t1lfl1/dem_read/dem_read.yaml")
-    case_dir = tmp_path / "t1lfl1" / "dem_read"
-    assert any(p.is_dir() and p != case_dir for p in case_dir.iterdir()), \
-        "用例文件夹下未生成时间戳运行目录"
+    logs_dir = tmp_path / "t1lfl1" / "logs" / "dem_read"
+    assert logs_dir.is_dir(), "未生成 logs/<用例名>/ 目录"
+    assert any(p.is_dir() for p in logs_dir.iterdir()), \
+        "logs/<用例名>/ 下未生成时间戳运行目录"
+
+
+def test_build_transport_frame_hook(tmp_path):
+    # build_transport 的 frame_hook：TX 经 transport tap 回调 (frame, False)
+    from flow import load_config
+    from recorder import Recorder
+    cfg_path = tmp_path / "cfg_hook.yaml"
+    cfg_path.write_text(CONFIG, encoding="utf-8")
+    cfg = load_config(cfg_path)
+    mock = MockCanDriver()
+    frames = []
+    with Recorder(tmp_path / "run_hook") as rec:
+        t = DiagnosticTester.build_transport(cfg, mock, rec,
+                                             frame_hook=lambda f, rx:
+                                             frames.append((f, rx)))
+        try:
+            t.send_payload(bytes.fromhex("1003"))  # 单帧 SF，无需流控
+        finally:
+            t.stop()
+        rec.close()
+        mock.close()
+    assert frames and frames[0][1] is False
+    assert frames[0][0].can_id == 0x70C
+    assert frames[0][0].data[:3] == bytes([2, 0x10, 0x03])
+
+
+def test_build_transport_without_frame_hook(tmp_path):
+    # 缺省 frame_hook（现有调用方式）不受影响，仍正常发帧
+    from flow import load_config
+    from recorder import Recorder
+    cfg_path = tmp_path / "cfg_plain.yaml"
+    cfg_path.write_text(CONFIG, encoding="utf-8")
+    cfg = load_config(cfg_path)
+    mock = MockCanDriver()
+    with Recorder(tmp_path / "run_plain") as rec:
+        t = DiagnosticTester.build_transport(cfg, mock, rec)
+        try:
+            t.send_payload(bytes.fromhex("1003"))
+        finally:
+            t.stop()
+        rec.close()
+        mock.close()
+    assert len(mock.sent) == 1
+    assert mock.sent[0].can_id == 0x70C
 
 
 def test_probe_log_dir_uses_project(run_cli, tmp_path):
