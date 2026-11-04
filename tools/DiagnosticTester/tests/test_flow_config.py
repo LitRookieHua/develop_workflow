@@ -369,3 +369,91 @@ def test_security_step_functional_rejected(tmp_path):
     with pytest.raises(ConfigError) as e:
         load(tmp_path, cfg_text=SEC_CFG, tc_text=text)
     assert "physical" in str(e.value)
+
+
+# ===== while 轮询步骤（testcase 侧校验） =====
+
+WHILE_STEP = """
+steps:
+  - {name: 轮询, request: "3101FF00",
+     while: {in_progress: "7101FF0001", delay_ms: 200},
+     expect: "7101FF0000"}
+on_fail: abort
+"""
+
+
+def test_while_step_loads(tmp_path):
+    _cfg, tc = load(tmp_path, tc_text=WHILE_STEP)
+    w = tc["steps"][0].while_rule
+    assert w.in_progress == bytes.fromhex("7101FF0001")
+    assert w.delay_ms == 200
+    assert w.max_cycles == 100  # 缺省防死循环上限
+
+
+def test_while_custom_max_cycles(tmp_path):
+    text = WHILE_STEP.replace("delay_ms: 200}", "delay_ms: 200, max_cycles: 5}")
+    _cfg, tc = load(tmp_path, tc_text=text)
+    assert tc["steps"][0].while_rule.max_cycles == 5
+
+
+def test_while_without_expect_allowed(tmp_path):
+    # 无 expect=跳出后只发不判：允许与普通步骤语义一致
+    text = WHILE_STEP.replace(',\n     expect: "7101FF0000"}', "}")
+    _cfg, tc = load(tmp_path, tc_text=text)
+    assert tc["steps"][0].expect is None
+    assert tc["steps"][0].while_rule is not None
+
+
+def test_while_missing_delay(tmp_path):
+    text = WHILE_STEP.replace("delay_ms: 200}", "}")
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "while.delay_ms" in str(e.value)
+
+
+def test_while_missing_in_progress(tmp_path):
+    text = WHILE_STEP.replace('in_progress: "7101FF0001", ', "")
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "while.in_progress" in str(e.value)
+
+
+def test_while_unknown_key(tmp_path):
+    text = WHILE_STEP.replace("delay_ms: 200}", "delay_ms: 200, deley: 1}")
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "while.deley" in str(e.value)
+
+
+def test_while_bad_max_cycles(tmp_path):
+    for bad in ("max_cycles: 0", "max_cycles: abc"):
+        text = WHILE_STEP.replace("delay_ms: 200}", f"delay_ms: 200, {bad}}}")
+        with pytest.raises(ConfigError) as e:
+            load(tmp_path, tc_text=text)
+        assert "while.max_cycles" in str(e.value)
+
+
+def test_while_bad_in_progress_hex(tmp_path):
+    text = WHILE_STEP.replace('"7101FF0001"', '"71GG"')
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "while.in_progress" in str(e.value)
+
+
+def test_while_functional_rejected(tmp_path):
+    text = WHILE_STEP.replace('expect: "7101FF0000"}',
+                              'expect: "7101FF0000", addressing: functional}')
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "physical" in str(e.value)
+
+
+def test_while_security_rejected(tmp_path):
+    text = """
+steps:
+  - {name: 解锁, security_access: app, while: {in_progress: "67", delay_ms: 1}}
+on_fail: abort
+"""
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, cfg_text=SEC_CFG, tc_text=text)
+    assert "while" in str(e.value)

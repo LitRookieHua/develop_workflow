@@ -108,6 +108,21 @@ CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
   `request`/`expect`/功能寻址同用，等级须在配置 security 节或为内置
   develop），执行完整 27 取种子 → 算密钥 → 发密钥序列，密钥响应
   `67+key_sub` 判 PASS。
+  还有一类是 while 轮询步骤（标定例程等待完成等场景）：普通步骤加
+  `while` 块（须物理寻址、须 `request`）——响应命中 `while.in_progress`
+  前缀即视为「进行中」，等 `while.delay_ms` 后重发同一请求；响应不再
+  命中（成功/失败/超时）即跳出循环，按 `expect` 正常判定（TIMEOUT 也
+  直接跳出）。`while.max_cycles` 可选（默认 100，防死循环，达到上限
+  跳出并以最终响应判定）。每轮收发都进 run.log，result.csv 仍一行一
+  步骤（记最终响应）：
+
+      - name: 等待标定完成
+        request: "3101FF00"
+        while:
+          in_progress: "7101FF0001"   # 末字节 01=进行中
+          delay_ms: 200
+          max_cycles: 100             # 可省，默认 100
+        expect: "7101FF0000"          # 末字节 00=完成
 - **on_fail** — 失败策略：`abort`（默认，首个 FAIL/TIMEOUT 即中止）或
   `continue`（跑完全部步骤）。
 - **timing**（可选）— 覆盖配置的 timing 默认值，只覆盖出现的键。

@@ -21,7 +21,8 @@ from uds import UdsClient, UdsResult
 
 HEX_RE = re.compile(r"^[0-9A-Fa-f]+$")
 STEP_FIELDS = {"name", "request", "expect", "timeout_ms", "delay_after_ms",
-               "addressing", "security_access"}
+               "addressing", "security_access", "while"}
+WHILE_FIELDS = {"in_progress", "delay_ms", "max_cycles"}
 CAN_FIELDS = {"device", "channel", "fd", "baudrate", "data_baudrate"}
 DIAGNOSTIC_FIELDS = {"request_id", "response_id", "functional_id"}
 TIMING_FIELDS = {"p2_ms", "p2star_ms", "step_delay_ms"}
@@ -34,6 +35,15 @@ class ConfigError(Exception):
 
 
 @dataclass
+class WhileRule:
+    """普通步骤的 while 轮询块：响应命中 in_progress 前缀=进行中，
+    等 delay_ms 后重发同一请求，直至响应不再命中/超时/达到 max_cycles。"""
+    in_progress: bytes
+    delay_ms: int | float
+    max_cycles: int = 100
+
+
+@dataclass
 class Step:
     name: str
     request: bytes | None = None
@@ -42,6 +52,7 @@ class Step:
     delay_after_ms: int | None = None
     addressing: str = "physical"
     security_access: str | None = None
+    while_rule: WhileRule | None = None
 
 
 def parse_hex_bytes(s, where: str) -> bytes:
@@ -161,6 +172,27 @@ def load_config(path) -> dict:
             "security_levels": security_levels}
 
 
+def _parse_while(raw, where: str, addressing: str) -> WhileRule | None:
+    """解析步骤的 while 轮询块；缺省 None（普通单发步骤）。"""
+    if raw is None:
+        return None
+    if addressing != "physical":
+        raise ConfigError(f"{where}: while 轮询只支持物理寻址 physical")
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{where}.while: 必须是映射")
+    _reject_unknown_keys(raw, WHILE_FIELDS, f"{where}.while")
+    for k in ("in_progress", "delay_ms"):
+        if k not in raw:
+            raise ConfigError(f"{where}.while.{k}: 缺失")
+    in_progress = parse_hex_bytes(raw["in_progress"], f"{where}.while.in_progress")
+    _check_num(raw, "delay_ms", f"{where}.while")
+    max_cycles = raw.get("max_cycles", 100)
+    if isinstance(max_cycles, bool) or not isinstance(max_cycles, int) or max_cycles < 1:
+        raise ConfigError(f"{where}.while.max_cycles: 应为 ≥1 的整数，当前 {max_cycles!r}")
+    return WhileRule(in_progress=in_progress, delay_ms=raw["delay_ms"],
+                     max_cycles=max_cycles)
+
+
 def _parse_steps(raw_steps, cfg: dict) -> list[Step]:
     can, diag = cfg["can"], cfg["diagnostic"]
     levels = cfg["security_levels"]
@@ -182,6 +214,8 @@ def _parse_steps(raw_steps, cfg: dict) -> list[Step]:
         if security is not None:
             if "request" in s or "expect" in s:
                 raise ConfigError(f"{where}: security_access 步骤不支持 request/expect")
+            if "while" in s:
+                raise ConfigError(f"{where}: security_access 步骤不支持 while")
             if security not in levels:
                 raise ConfigError(f"{where}.security_access: 只能是 {sorted(levels)}")
             if s.get("addressing", "physical") != "physical":
@@ -204,10 +238,11 @@ def _parse_steps(raw_steps, cfg: dict) -> list[Step]:
             sf_max = 62 if can["fd"] else 7
             if len(request) > sf_max:
                 raise ConfigError(f"{where}: 功能寻址请求超过单帧上限 {sf_max} 字节")
+        while_rule = _parse_while(s.get("while"), where, addressing)
         steps.append(Step(name=str(s["name"]), request=request, expect=expect,
                           timeout_ms=s.get("timeout_ms"),
                           delay_after_ms=s.get("delay_after_ms"),
-                          addressing=addressing))
+                          addressing=addressing, while_rule=while_rule))
     return steps
 
 
@@ -353,12 +388,34 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir, log_hook=None,
 
                 else:
                     log(f"[{i}] {step.name}")
-                    log(f"[{i}] UDS TX: {step.request.hex().upper()}")
-                    result = uds.request(step.request, timeout_ms=step.timeout_ms)
+                    w = step.while_rule
+                    cycles = 0
+                    while True:
+                        if cycles > 0:
+                            # 下一轮前先查停止请求再等待：停止时不多等一轮 delay
+                            if should_stop is not None and should_stop():
+                                log(f"[{i}] Flow stopped by request during while poll")
+                                break
+                            time.sleep(w.delay_ms / 1000.0)
+                        log(f"[{i}] UDS TX: {step.request.hex().upper()}")
+                        result = uds.request(step.request,
+                                             timeout_ms=step.timeout_ms)
+                        log(f"[{i}] UDS RX: {_rx_text(result)}")
+                        cycles += 1
+                        if w is None:
+                            break
+                        if result.timeout or result.response is None:
+                            break  # 无响应不算进行中：跳出按超时判定
+                        if not result.response.startswith(w.in_progress):
+                            break  # 成功或失败：跳出按 expect 判定
+                        if cycles >= w.max_cycles:
+                            log(f"[{i}] while: 达到 max_cycles={w.max_cycles}，仍为进行中")
+                            break
                     verdict = judge(step, result)
                     rec.step(i, step.name, step.addressing,
                              step.request.hex().upper(), result, verdict)
-                    log(f"[{i}] UDS RX: {_rx_text(result)}")
+                    if w is not None:
+                        log(f"[{i}] while: 共 {cycles} 次请求")
                     log(f"[{i}] {_result_text(verdict, step.expect, result)}")
                 if verdict == "PASS":
                     counters["pass"] += 1

@@ -329,3 +329,96 @@ def test_should_stop_between_steps(tmp_path):
     summary = run_flow(cfg, tc, mock, tmp_path, should_stop=should_stop)
     assert summary == {"total": 1, "pass": 1, "fail": 0, "timeout": 0}
     assert len(mock.sent) == 1
+
+
+# ===== while 轮询步骤 =====
+
+WHILE_STEPS = """
+steps:
+  - {name: 轮询标定, request: "3101FF00",
+     while: {in_progress: "7101FF0001", delay_ms: 0},
+     expect: "7101FF0000"}
+on_fail: abort
+"""
+
+
+def _poll_ecu(mock, script):
+    """模拟标定 ECU：按 script 依次回响应，耗尽后重复最后一项。"""
+    state = {"n": 0}
+
+    def on_send(frame):
+        req = frame.data[1:1 + frame.data[0]]
+        if req == bytes.fromhex("3101FF00"):
+            idx = min(state["n"], len(script) - 1)
+            state["n"] += 1
+            payload = bytes.fromhex(script[idx])
+            mock.push_rx(0x78C, bytes([len(payload)]) + payload)
+
+    mock.on_send = on_send
+
+
+def test_while_poll_until_success(tmp_path):
+    # 前 2 轮进行中、第 3 轮成功：跳出循环按 expect 判 PASS
+    cfg, tc = load(tmp_path, tc_text=WHILE_STEPS)
+    mock = MockCanDriver()
+    _poll_ecu(mock, ["7101FF0001", "7101FF0001", "7101FF0000"])
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary == {"total": 1, "pass": 1, "fail": 0, "timeout": 0}
+    assert len(mock.sent) == 3
+    csv_text = (tmp_path / "result.csv").read_text(encoding="utf-8")
+    rows = [line for line in csv_text.splitlines() if line.strip()]
+    assert len(rows) == 2  # 表头 + 1 步：多轮轮询只记一行，取最终响应
+    log_text = (tmp_path / "run.log").read_text(encoding="utf-8")
+    assert log_text.count("UDS TX: 3101FF00") == 3  # 每轮收发都进日志（证据链）
+    assert "while: 共 3 次请求" in log_text
+
+
+def test_while_poll_nrc_breaks_fail(tmp_path):
+    # 进行中 1 轮后回负响应：失败立即跳出，不再轮询
+    cfg, tc = load(tmp_path, tc_text=WHILE_STEPS)
+    mock = MockCanDriver()
+    _poll_ecu(mock, ["7101FF0001", "7F3131"])
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary == {"total": 1, "pass": 0, "fail": 1, "timeout": 0}
+    assert len(mock.sent) == 2
+
+
+def test_while_poll_max_cycles_cap(tmp_path):
+    # 恒进行中：达到 max_cycles 上限跳出防死循环，最终响应判 FAIL
+    tc_text = WHILE_STEPS.replace(
+        'while: {in_progress: "7101FF0001", delay_ms: 0}',
+        'while: {in_progress: "7101FF0001", delay_ms: 0, max_cycles: 3}')
+    cfg, tc = load(tmp_path, tc_text=tc_text)
+    mock = MockCanDriver()
+    _poll_ecu(mock, ["7101FF0001"])
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary == {"total": 1, "pass": 0, "fail": 1, "timeout": 0}
+    assert len(mock.sent) == 3
+    assert "max_cycles=3" in (tmp_path / "run.log").read_text(encoding="utf-8")
+
+
+def test_while_poll_timeout_breaks(tmp_path):
+    # 无响应不算进行中：超时立即跳出判 TIMEOUT
+    cfg, tc = load(tmp_path, tc_text=WHILE_STEPS)
+    mock = MockCanDriver()  # 不回帧
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary == {"total": 1, "pass": 0, "fail": 0, "timeout": 1}
+    assert len(mock.sent) == 1
+
+
+def test_while_poll_stop_between_cycles(tmp_path):
+    # 恒进行中 + 步骤开始前不停止、第二轮前停止：只发 1 次，停止日志可辨
+    cfg, tc = load(tmp_path, tc_text=WHILE_STEPS)
+    mock = MockCanDriver()
+    _poll_ecu(mock, ["7101FF0001"])
+    calls = {"n": 0}
+
+    def should_stop():
+        calls["n"] += 1
+        return calls["n"] > 1
+
+    summary = run_flow(cfg, tc, mock, tmp_path, should_stop=should_stop)
+    assert len(mock.sent) == 1
+    assert summary["fail"] == 1  # 停止时仍是进行中响应：按 expect 判 FAIL
+    assert "during while poll" in (tmp_path / "run.log").read_text(
+        encoding="utf-8")
