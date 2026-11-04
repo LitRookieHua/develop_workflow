@@ -10,7 +10,7 @@ from PySide6.QtCore import QRectF
 from PySide6.QtGui import QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QWidget
 
-BACKGROUND_FILE = "Konachan.com-mikasa.jpg"
+BACKGROUND_FILE = "mikasa.jpg"
 
 
 def background_path(base_dir: Path) -> Path:

@@ -1496,3 +1496,4 @@ Expected: 合并完成、master 上全量测试通过。`feature/dt-ui` 分支�
   透出背景图且文字可读）
 - **T22（本次提交）**：背景图换为 Konachan.com-mikasa.jpg（用户指定；文件名收敛
   为 background.py 的 BACKGROUND_FILE 常量，换图只改一处）
+- **T23（本次提交）**：背景图再换为 mikasa.jpg（用户指定，1712x1324）
