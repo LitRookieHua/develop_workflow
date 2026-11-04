@@ -19,6 +19,7 @@ from security import UnlockError, perform_unlock
 from uds import UdsResult
 
 from .background import BackgroundWidget, background_path, load_icon, load_pixmap
+from .fixed_routines_tab import FixedRoutinesTab
 from .framefmt import diagnostic_ids, format_frame_line
 from .routine_tab import RoutineTab
 from .scan import scan_configs, scan_routines
@@ -69,13 +70,16 @@ class MainWindow(QMainWindow):
         bar.addWidget(self._chk_keepalive)
         bar.addWidget(self._spin_period)
 
-        # Tab 区
-        self._routine_tab = RoutineTab()
+        # Tab 区：手动发送 / 固定例程 / 配置例程
         self._single_tab = SingleShotTab()
+        self._fixed_tab = FixedRoutinesTab()
+        self._routine_tab = RoutineTab()
         self._single_tab.set_busy(True)  # 未连接
+        self._fixed_tab.set_busy(True)
         tabs = QTabWidget()
-        tabs.addTab(self._routine_tab, "例程运行")
-        tabs.addTab(self._single_tab, "单发调试")
+        tabs.addTab(self._single_tab, "手动发送")
+        tabs.addTab(self._fixed_tab, "固定例程")
+        tabs.addTab(self._routine_tab, "配置例程")
 
         # 底部：日志/报文 双 Tab（各自独立自动滚动/清空）
         log_page, self._log_view, self._chk_log = self._make_view("日志")
@@ -110,9 +114,10 @@ class MainWindow(QMainWindow):
         self._routine_tab.stop_requested.connect(self._stop_flow)
         self._routine_tab.refresh_requested.connect(self._refresh_routines)
         self._routine_tab.browse_requested.connect(self._browse_routines)
-        self._routine_tab.dem_requested.connect(self._run_dem)
         self._single_tab.send_requested.connect(self._send_single)
-        self._single_tab.unlock_requested.connect(self._unlock)
+        self._fixed_tab.session_requested.connect(self._change_session)
+        self._fixed_tab.unlock_requested.connect(self._unlock)
+        self._fixed_tab.dem_requested.connect(self._run_dem)
 
     # ---- 日志 ----
     @staticmethod
@@ -177,8 +182,9 @@ class MainWindow(QMainWindow):
                 f"● 已连接 {self._combo.currentText()} · {can['device']} ch{can['channel']}")
             self._btn_connect.setText("断开")
             self._combo.setEnabled(False)
-            self._single_tab.set_levels(self._session.cfg["security_levels"])
+            self._fixed_tab.set_levels(self._session.cfg["security_levels"])
             self._single_tab.set_busy(False)
+            self._fixed_tab.set_busy(False)
             has_fid = self._session.functional_id is not None
             self._chk_keepalive.setEnabled(has_fid)
             self._spin_period.setEnabled(has_fid)
@@ -192,8 +198,10 @@ class MainWindow(QMainWindow):
             self._chk_keepalive.setChecked(False)
             self._chk_keepalive.setEnabled(False)
             self._spin_period.setEnabled(False)
-            self._single_tab.set_levels([])
             self._single_tab.set_busy(True)
+            self._fixed_tab.set_levels([])
+            self._fixed_tab.set_busy(True)
+            self._fixed_tab.set_status("（未连接）")
             self._routine_tab.set_status("（未连接）")
 
     # ---- 会话保持 ----
@@ -207,6 +215,11 @@ class MainWindow(QMainWindow):
     def _on_keepalive_failed(self, msg: str):
         self._chk_keepalive.setChecked(False)
         self.statusBar().showMessage(msg, 10000)
+
+    def _set_tabs_busy(self, busy: bool):
+        """任务（发送/解锁/会话切换/读DTC/例程）起止时同步两个 Tab 的按钮态。"""
+        self._single_tab.set_busy(busy)
+        self._fixed_tab.set_busy(busy)
 
     # ---- 例程运行 ----
     def _refresh_routines(self):
@@ -256,7 +269,7 @@ class MainWindow(QMainWindow):
 
         self._routine_tab.set_running(True)
         self._routine_tab.set_status(f"运行中：{tc_path.stem}")
-        self._single_tab.set_busy(True)
+        self._set_tabs_busy(True)
         self._btn_connect.setEnabled(False)
         self._flow_thread = FuncThread("flow", job, self)
         self._flow_thread.done.connect(lambda _n, res: self._flow_done(res, run_dir))
@@ -267,7 +280,7 @@ class MainWindow(QMainWindow):
         self._flow_stop = None
         self._session.resume_transport()
         self._routine_tab.set_running(False)
-        self._single_tab.set_busy(not self._session.connected)
+        self._set_tabs_busy(not self._session.connected)
         self._btn_connect.setEnabled(True)
         if isinstance(res, Exception):
             self._routine_tab.set_status(f"运行异常：{res}")
@@ -299,14 +312,14 @@ class MainWindow(QMainWindow):
         def job():
             return uds.request(req)
 
-        self._single_tab.set_busy(True)
+        self._set_tabs_busy(True)
         self._single_thread = FuncThread("single", job, self)
         self._single_thread.done.connect(lambda _n, res: self._single_done(req, res))
         self._single_thread.start()
 
     def _single_done(self, req, res):
         self._single_thread = None
-        self._single_tab.set_busy(not self._session.connected)
+        self._set_tabs_busy(not self._session.connected)
         ts = time.strftime("%H:%M:%S")
         self._append_log(f"UDS TX: {req.hex().upper()}")
         if isinstance(res, Exception):
@@ -322,6 +335,49 @@ class MainWindow(QMainWindow):
             + (f"（NRC 0x{r.nrc:02X}）" if r.nrc is not None else "")
             + (f"  {r.elapsed_ms:.0f}ms" if r.response else ""))
 
+    # ---- 会话切换 ----
+    def _change_session(self, req_hex: str):
+        if self._single_thread is not None or self._flow_thread is not None:
+            return
+        if not self._session.connected:
+            self.statusBar().showMessage("请先连接", 5000)
+            return
+        try:
+            req = parse_hex_bytes(req_hex, "会话切换请求")
+        except ConfigError as e:
+            self.statusBar().showMessage(f"输入错误：{e}", 5000)
+            return
+        uds = self._session.uds
+
+        def job():
+            return uds.request(req)
+
+        self._set_tabs_busy(True)
+        self._fixed_tab.set_status("会话切换中…")
+        self._single_thread = FuncThread("session", job, self)
+        self._single_thread.done.connect(lambda _n, res: self._session_done(req, res))
+        self._single_thread.start()
+
+    def _session_done(self, req, res):
+        self._single_thread = None
+        self._set_tabs_busy(not self._session.connected)
+        if isinstance(res, Exception):
+            self._fixed_tab.set_status(f"会话切换异常：{res}")
+            self._append_log(f"会话切换异常：{res}")
+            return
+        r: UdsResult = res
+        rx = r.response.hex().upper() if r.response else "(timeout)"
+        self._append_log(f"UDS TX: {req.hex().upper()}")
+        self._append_log(
+            f"UDS RX: {rx}"
+            + (f"（NRC 0x{r.nrc:02X}）" if r.nrc is not None else "")
+            + (f"  {r.elapsed_ms:.0f}ms" if r.response else ""))
+        ok = r.response is not None and r.response.startswith(b"\x50")
+        verdict = ("会话切换成功" if ok
+                   else "会话切换超时" if r.timeout else "会话切换失败（非正响应）")
+        self._fixed_tab.set_status(verdict)
+        self.statusBar().showMessage(verdict, 5000)
+
     # ---- 解锁 ----
     def _unlock(self, level_name: str):
         if self._single_thread is not None or self._flow_thread is not None:
@@ -335,19 +391,22 @@ class MainWindow(QMainWindow):
         def job():
             return perform_unlock(uds, level, log=self.log_line.emit)
 
-        self._single_tab.set_busy(True)
+        self._set_tabs_busy(True)
+        self._fixed_tab.set_status(f"解锁[{level_name}] 中…")
         self._single_thread = FuncThread("unlock", job, self)
         self._single_thread.done.connect(lambda _n, res: self._unlock_done(level_name, res))
         self._single_thread.start()
 
     def _unlock_done(self, level_name: str, res):
         self._single_thread = None
-        self._single_tab.set_busy(not self._session.connected)
+        self._set_tabs_busy(not self._session.connected)
         if isinstance(res, UnlockError):
+            self._fixed_tab.set_status(f"解锁[{level_name}] 失败：{res}")
             self._append_log(f"解锁[{level_name}] 失败：{res}")
             self.statusBar().showMessage(f"解锁失败：{res}", 5000)
             return
         if isinstance(res, Exception):
+            self._fixed_tab.set_status(f"解锁[{level_name}] 异常：{res}")
             self._append_log(f"解锁[{level_name}] 异常：{res}")
             self.statusBar().showMessage(f"解锁异常：{res}", 5000)
             return
@@ -356,7 +415,9 @@ class MainWindow(QMainWindow):
         self._append_log(
             f"UDS RX: {rx}"
             + (f"（NRC 0x{result.nrc:02X}）" if result.nrc is not None else ""))
-        self.statusBar().showMessage("解锁成功" if result.ok else "解锁失败")
+        text = f"解锁[{level_name}] " + ("成功" if result.ok else "失败")
+        self._fixed_tab.set_status(text)
+        self.statusBar().showMessage(text, 5000)
 
     # ---- DTC 读取 ----
     def _run_dem(self):
@@ -377,8 +438,8 @@ class MainWindow(QMainWindow):
         def job():
             return run_dem(uds, maps, self.log_line.emit, unlock=unlock)
 
-        self._single_tab.set_busy(True)
-        self._routine_tab.set_dem_busy(True)
+        self._set_tabs_busy(True)
+        self._fixed_tab.set_status("DTC 读取中…")
         self._btn_connect.setEnabled(False)
         self._single_thread = FuncThread("dem", job, self)
         self._single_thread.done.connect(lambda _n, res: self._dem_done(res))
@@ -386,15 +447,16 @@ class MainWindow(QMainWindow):
 
     def _dem_done(self, res):
         self._single_thread = None
-        self._single_tab.set_busy(not self._session.connected)
-        self._routine_tab.set_dem_busy(False)
+        self._set_tabs_busy(not self._session.connected)
         self._btn_connect.setEnabled(True)
         if isinstance(res, Exception):
+            self._fixed_tab.set_status(f"DTC 读取异常：{res}")
             self._append_log(f"DTC 读取异常：{res}")
             self.statusBar().showMessage(f"DTC 读取异常：{res}", 5000)
             return
-        self.statusBar().showMessage(
-            "DTC 读取完成" if res == 0 else "DTC 读取完成（部分项失败）")
+        text = "DTC 读取完成" if res == 0 else "DTC 读取完成（部分项失败）"
+        self._fixed_tab.set_status(text)
+        self.statusBar().showMessage(text)
 
     # ---- 退出 ----
     def closeEvent(self, event):

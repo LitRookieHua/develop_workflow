@@ -2,10 +2,11 @@
 
 日期：2026-11-03
 状态：已确认
-修订：2026-11-03 增补四项——底部 Log 面板改为「日志/报文」双 Tab（原始 CAN 帧
-视图，仅 diagnostic 三 ID）、例程运行 Tab 增加「读DTC」、例程运行期间挂起会话
-transport（修复双 pump 抢帧导致 UI 跑例程间歇超时的问题）、主窗口背景图与
-图标（`image/shenlilinghua.png`，缺失自动降级）。详见 §3/§4/§5 修订处。
+修订：2026-11-03 增补五项——底部 Log 面板改为「日志/报文」双 Tab（原始 CAN 帧
+视图，仅 diagnostic 三 ID）、例程运行期间挂起会话 transport（修复双 pump 抢帧
+导致 UI 跑例程间歇超时的问题）、主窗口背景图与图标（`image/shenlilinghua.png`，
+缺失自动降级）、中部 Tab 重组为「手动发送 / 固定例程 / 配置例程」三页（安全
+解锁与读DTC 归入固定例程，新增会话切换）。详见 §3/§4/§5 修订处。
 
 ## 背景与目标
 
@@ -59,15 +60,16 @@ tools/DiagnosticTester/
   状态机——与 flow.py 功能寻址 no-expect 步骤同款路径）；驱动 `_tx_lock` 保证与
   pump 线程 FC 发送互斥
 - worker 线程结果/日志经 Qt signal 回主线程，无跨线程直接操作控件
-- 例程运行期间单发/解锁控件禁用（避免与 run_flow 并发争用同一 transport）
+- 任一任务（例程运行/单发/解锁/会话切换/读DTC）运行期间，其余任务入口控件
+  禁用（避免与 run_flow 并发争用同一 transport）
 
-## 3. 界面结构（布局方案 C：顶部工具条 + 双 Tab + 底部共享日志）
+## 3. 界面结构（布局方案 C：顶部工具条 + 三 Tab + 底部日志/报文双 Tab）
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │ 工具条：配置下拉▾ | 连接/断开 | 状态● | 3E80开关 | 周期ms │
 ├────────────────────────────────────────────────────────┤
-│ Tab: [例程运行] [单发调试]                                │
+│ Tab: [手动发送] [固定例程] [配置例程]                       │
 │ ┌──────────────────────────────────────────────────┐   │
 │ │ （Tab 内容，独占中部空间）                          │   │
 │ └──────────────────────────────────────────────────┘   │
@@ -81,14 +83,17 @@ tools/DiagnosticTester/
 - **工具条**：配置下拉扫 `configs/` 全部 yaml（含子目录，显示 `n60/n60_cx` 相对
   路径）；连接/断开按钮；连接状态（设备名+通道）；3E80 开关 + 周期 spinbox
   （500–50000，默认 2500）
-- **例程运行 Tab**：例程树（根目录 `<DiagnosticTester>/testcase/`，与 CLI 默认
-  用法一致；工具条提供「浏览」可选任意目录或单个 yaml 文件兜底），按当前配置
-  项目名过滤显示 `testcase/<项目>/` + 刷新 +
-  运行 + 停止 + **读DTC** + 结果汇总（PASS/FAIL/TIMEOUT、当前步骤、run_dir 路径）+
+- **手动发送 Tab**（修订：原「单发调试」，解锁控件移至固定例程）：TX hex 输入 +
+  发送（Enter 触发）+ 收发历史表（时间/TX/RX/NRC/耗时，双击回填 TX）
+- **固定例程 Tab**（修订新增）：内置固定动作三行——会话切换（下拉
+  1001 默认 / 1003 扩展（默认选中）/ 1002 编程 + 「切换」按钮，正响应判定 0x50）；
+  安全解锁（等级下拉（配置 security 节 + 内置 develop）+ 「解锁」按钮）；读DTC
+  （「读取」按钮，序列同 §4 DTC 读取）。各动作结果回显本页状态行
+- **配置例程 Tab**（修订：原「例程运行」，读DTC 移至固定例程）：例程树（根目录
+  `<DiagnosticTester>/testcase/`，与 CLI 默认用法一致；工具条提供「浏览」可选
+  任意目录或单个 yaml 文件兜底），按当前配置项目名过滤显示 `testcase/<项目>/` +
+  刷新 + 运行 + 停止 + 结果汇总（PASS/FAIL/TIMEOUT、当前步骤、run_dir 路径）+
   「打开运行目录」（explorer）
-- **单发调试 Tab**：TX hex 输入 + 发送（Enter 触发）+ 解锁等级下拉（配置
-  security 节 + 内置 develop）+ 解锁按钮 + 收发历史表（时间/TX/RX/NRC/耗时，
-  双击回填 TX）
 - **日志 Tab**：QPlainTextEdit，行格式与 run.log 一致；自动滚动开关 / 清空按钮
 - **报文 Tab**（修订新增）：**原始 CAN 帧逐行显示，不做 UDS 层转换**，且仅显示
   diagnostic 配置的 request/response/functional 三个 CAN ID（isotp tap 在 rx_id
@@ -105,7 +110,7 @@ tools/DiagnosticTester/
 `Recorder`（落盘 `logs/<项目>_ui_<时间戳>/`，三路记录保证据链）；断开按
 transport.stop → recorder.close → driver.close 逆序收尾。切换配置必须先断开。
 
-### 例程运行
+### 例程运行（配置例程 Tab）
 
 - worker 线程调 `run_flow`；run_dir 规则与 CLI `run` 一致：
   `<用例目录>/../logs/<用例名>/<时间戳>/`
@@ -128,12 +133,14 @@ transport.stop → recorder.close → driver.close 逆序收尾。切换配置�
 
 ### DTC 读取（修订新增）
 
-- 例程运行 Tab「读DTC」按钮：worker 线程调 `dem.run_dem(uds, maps, emit,
+- 固定例程 Tab「读DTC」按钮（修订：自配置例程 Tab 迁入）：worker 线程调
+  `dem.run_dem(uds, maps, emit,
   unlock=develop)`，maps 从当前配置目录加载（dtc_map/event_map/fimfid_map/
   dem_dids.yaml）
 - 序列：10 03 进扩展会话 → develop 解锁（失败记日志、不阻断后续读取）→
   19 02 0F + 3 个 event DID + fimfid 读取
-- 运行期间读DTC/连接按钮禁用（防止断开拆掉 worker 脚下的链路）；结果状态栏
+- 运行期间手动发送/固定例程两页按钮与连接按钮禁用（防止断开拆掉 worker 脚下的
+  链路）；结果回显固定例程状态行 + 状态栏
   汇总（0=全过，非 0=部分项失败）
 
 ### 单发
