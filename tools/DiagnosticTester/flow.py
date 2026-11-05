@@ -20,8 +20,10 @@ from security import UnlockError, levels_from_config, perform_unlock
 from uds import UdsClient, UdsResult
 
 HEX_RE = re.compile(r"^[0-9A-Fa-f]+$")
+VAR_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 STEP_FIELDS = {"name", "request", "expect", "timeout_ms", "delay_after_ms",
-               "addressing", "security_access", "while"}
+               "addressing", "security_access", "while",
+               "set_var", "expect_equals_var", "expect_not_equals_var"}
 WHILE_FIELDS = {"in_progress", "delay_ms", "max_cycles"}
 CAN_FIELDS = {"device", "channel", "fd", "baudrate", "data_baudrate"}
 DIAGNOSTIC_FIELDS = {"request_id", "response_id", "functional_id"}
@@ -53,6 +55,9 @@ class Step:
     addressing: str = "physical"
     security_access: str | None = None
     while_rule: WhileRule | None = None
+    set_var: str | None = None
+    expect_equals_var: str | None = None
+    expect_not_equals_var: str | None = None
 
 
 def parse_hex_bytes(s, where: str) -> bytes:
@@ -193,6 +198,17 @@ def _parse_while(raw, where: str, addressing: str) -> WhileRule | None:
                      max_cycles=max_cycles)
 
 
+def _parse_var_field(s, key, where):
+    """校验 set_var / expect_*_var 字段：合法变量名（标识符）。"""
+    v = s.get(key)
+    if v is None:
+        return None
+    if not isinstance(v, str) or not VAR_NAME_RE.match(v):
+        raise ConfigError(f"{where}.{key}: 应为标识符风格的变量名字符串，"
+                         f"当前: {v!r}")
+    return v
+
+
 def _parse_steps(raw_steps, cfg: dict) -> list[Step]:
     can, diag = cfg["can"], cfg["diagnostic"]
     levels = cfg["security_levels"]
@@ -216,6 +232,9 @@ def _parse_steps(raw_steps, cfg: dict) -> list[Step]:
                 raise ConfigError(f"{where}: security_access 步骤不支持 request/expect")
             if "while" in s:
                 raise ConfigError(f"{where}: security_access 步骤不支持 while")
+            if {"set_var", "expect_equals_var", "expect_not_equals_var"} & set(s):
+                raise ConfigError(f"{where}: security_access 步骤不支持 "
+                                 f"set_var/expect_*_var")
             if security not in levels:
                 raise ConfigError(f"{where}.security_access: 只能是 {sorted(levels)}")
             if s.get("addressing", "physical") != "physical":
@@ -239,10 +258,20 @@ def _parse_steps(raw_steps, cfg: dict) -> list[Step]:
             if len(request) > sf_max:
                 raise ConfigError(f"{where}: 功能寻址请求超过单帧上限 {sf_max} 字节")
         while_rule = _parse_while(s.get("while"), where, addressing)
+        set_var = _parse_var_field(s, "set_var", where)
+        expect_eq = _parse_var_field(s, "expect_equals_var", where)
+        expect_ne = _parse_var_field(s, "expect_not_equals_var", where)
+        if expect_eq is not None and expect_ne is not None:
+            raise ConfigError(f"{where}: expect_equals_var 与 "
+                             f"expect_not_equals_var 互斥")
+        if addressing != "physical" and (set_var or expect_eq or expect_ne):
+            raise ConfigError(f"{where}: set_var/expect_*_var 只支持物理寻址")
         steps.append(Step(name=str(s["name"]), request=request, expect=expect,
                           timeout_ms=s.get("timeout_ms"),
                           delay_after_ms=s.get("delay_after_ms"),
-                          addressing=addressing, while_rule=while_rule))
+                          addressing=addressing, while_rule=while_rule,
+                          set_var=set_var, expect_equals_var=expect_eq,
+                          expect_not_equals_var=expect_ne))
     return steps
 
 
@@ -306,6 +335,7 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir, log_hook=None,
         return ms / 1000.0
 
     counters = {"total": 0, "pass": 0, "fail": 0, "timeout": 0}
+    vars: dict[str, bytes] = {}
     with Recorder(run_dir) as rec:
         def tap(frame, is_rx):
             rec.frame(frame, is_rx)
@@ -412,6 +442,32 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir, log_hook=None,
                             log(f"[{i}] while: 达到 max_cycles={w.max_cycles}，仍为进行中")
                             break
                     verdict = judge(step, result)
+                    if step.expect_equals_var is not None \
+                            or step.expect_not_equals_var is not None:
+                        name = (step.expect_equals_var
+                                if step.expect_equals_var is not None
+                                else step.expect_not_equals_var)
+                        want_equal = step.expect_equals_var is not None
+                        if result.timeout or result.response is None:
+                            verdict = "TIMEOUT"
+                        elif name not in vars:
+                            verdict = "FAIL"
+                            log(f"[{i}] var '{name}' 未设置"
+                                f"（需先经 set_var 步骤记录）")
+                        else:
+                            op = "==" if want_equal else "!="
+                            if (result.response == vars[name]) != want_equal:
+                                verdict = "FAIL"
+                            log(f"[{i}] var '{name}' {op} 存留值 "
+                                f"{vars[name].hex().upper()}："
+                                f"{'一致' if result.response == vars[name] else '不一致'}")
+                    if step.set_var is not None:
+                        if result.response is not None:
+                            vars[step.set_var] = result.response
+                            log(f"[{i}] var '{step.set_var}' <= "
+                                f"{result.response.hex().upper()}")
+                        else:
+                            log(f"[{i}] var '{step.set_var}' 未记录（无响应）")
                     rec.step(i, step.name, step.addressing,
                              step.request.hex().upper(), result, verdict)
                     if w is not None:

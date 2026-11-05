@@ -123,6 +123,22 @@ CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
           delay_ms: 200
           max_cycles: 100             # 可省，默认 100
         expect: "7101FF0000"          # 末字节 00=完成
+  普通步骤还可带响应变量（须物理寻址）：`set_var: <名>` 把本步完整
+  响应记录到流程内变量（可与 expect 同用）；`expect_equals_var: <名>` /
+  `expect_not_equals_var: <名>`（互斥）把本步完整响应与先前记录的变量
+  逐字节比较，不满足判 FAIL——用于跨步骤的值断言（如 0x27 种子记忆：
+  同周期重复取种子须逐字节一致）。判定顺序：先按 expect 前缀，再做
+  变量比较（都须满足），最后 set_var 记录（同一变量重复记录即覆盖，
+  equals 比较的是记录时的旧值）。变量操作都进 run.log 留痕：
+
+      - name: 取种子（记录）
+        request: "2701"
+        expect: "6701"
+        set_var: seed1
+      - name: 取种子（须与上次一致）
+        request: "2701"
+        expect: "6701"
+        expect_equals_var: seed1
 - **on_fail** — 失败策略：`abort`（默认，首个 FAIL/TIMEOUT 即中止）或
   `continue`（跑完全部步骤）。
 - **timing**（可选）— 覆盖配置的 timing 默认值，只覆盖出现的键。

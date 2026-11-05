@@ -422,3 +422,92 @@ def test_while_poll_stop_between_cycles(tmp_path):
     assert summary["fail"] == 1  # 停止时仍是进行中响应：按 expect 判 FAIL
     assert "during while poll" in (tmp_path / "run.log").read_text(
         encoding="utf-8")
+
+
+# ===== 变量记录/比较步骤（set_var / expect_*_var） =====
+
+SEED_A = bytes.fromhex("2CBA4F594105BBF56B52B17757369A46")
+SEED_B = bytes.fromhex("AA11223344556677889900112233445566")
+
+# 18B 种子响应须 FD 转义单帧（同解锁用例设定）
+VAR_CONFIG = CONFIG.replace("fd: false", "fd: true")
+
+VAR_TC = """
+steps:
+  - {name: 取种子1, request: "2701", expect: "6701", set_var: seed}
+  - {name: 取种子2, request: "2701", expect: "6701", expect_equals_var: seed}
+  - {name: 取种子3, request: "2701", expect: "6701", expect_not_equals_var: seed}
+on_fail: continue
+"""
+
+
+def _seed_ecu(mock, seeds):
+    """模拟 ECU 2701：按 seeds 依次回 6701+种子，耗尽后重复最后一项。"""
+    state = {"n": 0}
+
+    def on_send(frame):
+        req = _parse_sf(frame.data)
+        if req == bytes.fromhex("2701"):
+            idx = min(state["n"], len(seeds) - 1)
+            state["n"] += 1
+            payload = bytes([0x67, 0x01]) + seeds[idx]
+            mock.push_rx(0x78C, _sf_rx(payload))
+
+    mock.on_send = on_send
+
+
+def test_var_equal_then_not_equal(tmp_path):
+    # 前两次同种子：equals PASS；第三次换种子：not_equals PASS
+    cfg, tc = load(tmp_path, cfg_text=VAR_CONFIG, tc_text=VAR_TC)
+    mock = MockCanDriver()
+    _seed_ecu(mock, [SEED_A, SEED_A, SEED_B])
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary == {"total": 3, "pass": 3, "fail": 0, "timeout": 0}
+    log_text = (tmp_path / "run.log").read_text(encoding="utf-8")
+    assert "var 'seed' <=" in log_text        # set_var 记录留痕
+    assert "var 'seed' == 存留值" in log_text  # equals 比较留痕
+    assert "不一致" in log_text                 # not_equals 比较留痕
+
+
+def test_var_equal_mismatch_fails(tmp_path):
+    # 第二次种子不同：expect_equals_var 判 FAIL；第三次 vs 存留值 A 仍不同 → PASS
+    cfg, tc = load(tmp_path, cfg_text=VAR_CONFIG, tc_text=VAR_TC)
+    mock = MockCanDriver()
+    _seed_ecu(mock, [SEED_A, SEED_B, SEED_B])
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary == {"total": 3, "pass": 2, "fail": 1, "timeout": 0}
+
+
+def test_var_not_equal_mismatch_fails(tmp_path):
+    # 第三次仍同种子：expect_not_equals_var 判 FAIL
+    cfg, tc = load(tmp_path, cfg_text=VAR_CONFIG, tc_text=VAR_TC)
+    mock = MockCanDriver()
+    _seed_ecu(mock, [SEED_A, SEED_A, SEED_A])
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary["pass"] == 2
+    assert summary["fail"] == 1
+
+
+def test_var_undefined_fails(tmp_path):
+    # 未先 set_var：两个比较步骤都判 FAIL 并留痕
+    tc_text = VAR_TC.replace(
+        '  - {name: 取种子1, request: "2701", expect: "6701", set_var: seed}\n', "")
+    cfg, tc = load(tmp_path, cfg_text=VAR_CONFIG, tc_text=tc_text)
+    mock = MockCanDriver()
+    _seed_ecu(mock, [SEED_A, SEED_A])
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary["fail"] == 2
+    assert "未设置" in (tmp_path / "run.log").read_text(encoding="utf-8")
+
+
+def test_var_timeout_verdict(tmp_path):
+    # 带 var 字段且无响应：判 TIMEOUT（即使无 expect）
+    tc_text = """
+steps:
+  - {name: 取种子1, request: "2701", expect_equals_var: seed, set_var: seed}
+on_fail: abort
+"""
+    cfg, tc = load(tmp_path, tc_text=tc_text)
+    mock = MockCanDriver()  # 不回帧
+    summary = run_flow(cfg, tc, mock, tmp_path)
+    assert summary == {"total": 1, "pass": 0, "fail": 0, "timeout": 1}

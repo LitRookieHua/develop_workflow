@@ -457,3 +457,59 @@ on_fail: abort
     with pytest.raises(ConfigError) as e:
         load(tmp_path, cfg_text=SEC_CFG, tc_text=text)
     assert "while" in str(e.value)
+
+
+# ===== 变量记录/比较步骤（set_var / expect_*_var） =====
+
+VAR_STEPS = """
+steps:
+  - {name: 取种子1, request: "2701", expect: "6701", set_var: seed1}
+  - {name: 取种子2, request: "2701", expect: "6701",
+     expect_equals_var: seed1, set_var: seed1}
+  - {name: 取种子3, request: "2701", expect: "6701", expect_not_equals_var: seed1}
+on_fail: abort
+"""
+
+
+def test_var_steps_load(tmp_path):
+    _cfg, tc = load(tmp_path, tc_text=VAR_STEPS)
+    s1, s2, s3 = tc["steps"]
+    assert s1.set_var == "seed1" and s1.expect_equals_var is None
+    assert s2.expect_equals_var == "seed1" and s2.set_var == "seed1"
+    assert s3.expect_not_equals_var == "seed1" and s3.set_var is None
+
+
+def test_var_steps_bad_name_rejected(tmp_path):
+    text = VAR_STEPS.replace("set_var: seed1}", "set_var: 1seed}", 1)
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "set_var" in str(e.value)
+
+
+def test_var_steps_eq_ne_mutex(tmp_path):
+    text = VAR_STEPS.replace(
+        'expect_not_equals_var: seed1}',
+        'expect_not_equals_var: seed1, expect_equals_var: seed1}')
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "互斥" in str(e.value)
+
+
+def test_var_steps_functional_rejected(tmp_path):
+    text = VAR_STEPS.replace(
+        'expect_not_equals_var: seed1}',
+        'expect_not_equals_var: seed1, addressing: functional}')
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, tc_text=text)
+    assert "物理寻址" in str(e.value)
+
+
+def test_var_steps_security_rejected(tmp_path):
+    text = """
+steps:
+  - {name: 解锁, security_access: app, set_var: seed1}
+on_fail: abort
+"""
+    with pytest.raises(ConfigError) as e:
+        load(tmp_path, cfg_text=SEC_CFG, tc_text=text)
+    assert "set_var" in str(e.value)
