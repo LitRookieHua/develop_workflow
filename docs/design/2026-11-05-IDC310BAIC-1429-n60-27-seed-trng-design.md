@@ -123,7 +123,7 @@ memcpy(Seed, g_seedXxx_au8, 16); *ErrorCode = E_POSITIVE_RESPONSE; LogSync(seed)
 return E_OK
 ```
 
-**DevelopSecurityGetSeed**：magic number 16B 校验保留；校验通过后走上述同构流程（回退路径沿用现状的 `+=` 累加形式）。
+**DevelopSecurityGetSeed**：magic number 16B 校验保留；校验通过后走上述同构流程（回退路径为全量覆盖 `=`，与 App/Boot 一致——原现状的 `+=` 累加会在已泄露的上一轮 seed 上叠加，压缩新 seed 候选空间，2026-11-05 评审修复 commit 9e8448619，同时字面量 16 统一为 `DCMAPPL_SECA_SEED_DEVELOP_LENGTH` 宏）。
 
 **App/Boot/DevelopSecurityCompareKey**：不改（g_seedXxx_au8 仍为 CompareKey 计算 Token 的依据，与最近一次 GetSeed 下发值一致）。
 
@@ -168,7 +168,7 @@ return E_OK
 ## 附录B：设计决策记录 (ADR 摘要)
 
 - **ADR-1 不加应用层 seed 缓存**（2026-11-05 用户确认）：周期内种子记忆由 Dcm 层既有安全访问管理承担（解锁未成功期间重复 `27 01` 复用 Dcm 内部 seed），应用层只把随机源换成 TRNG，避免重复实现、diff 最小。
-- **ADR-2 保留 LCG 回退而非 TRNG 失败直接报错**：产线/售后解锁可用性优先；回退即现状 `imo_GetRandom_u16()` 原样保留，不新增代码。
+- **ADR-2 保留 LCG 回退而非 TRNG 失败直接报错**（2026-11-05 评审维持）：产线/售后解锁可用性优先——TRNG 故障时拒绝 27 01 会使 HSM 异常期间诊断完全瘫痪；回退沿用现状 `imo_GetRandom_u16()`（同款 TRNG+LCG 回退模式 b81vs 已评审合入，IDC310BAIC-1385）。评审另提出 Develop 级回退 `+=` 累加缺陷（security/high），已按意见改为全量覆盖（commit 9e8448619）。
 - **ADR-3 最小补丁、不同步 b81vs 风格**（2026-11-05 用户确认）：仅在 n60 现文件上做功能性修改（include + 3 个 GetSeed 随机源替换，最终 diff +19/-6），不引入 b81vs 变体的 PRQA 注释块、const 签名、`(void)` 转换等风格现代化，保持 diff 最小可评审。
 
 ## 附录C：开放问题 (Open Issues)
