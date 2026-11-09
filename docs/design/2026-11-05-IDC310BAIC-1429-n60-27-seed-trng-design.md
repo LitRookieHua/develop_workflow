@@ -28,7 +28,7 @@
 
 - 仅 N60 变体：`cpj_baic/dia_cfg/var/src/vehicle/n60/0x27/ov_dia_0x27_security_access.cpp`（App/Boot/Develop 三个安全级共用该文件）；
 - 不改 b81vs（已实现 TRNG，见 1.4 参考实现）、b70ks/n53（未在本需求范围）；
-- 不改 Dcm 配置（arxml 的 DcmDspSecurityGetSeedFnc 回调名不变）、不改 CMake（`CryptoServ_Component` 已在 `cpj_baic/dia_cfg/CMakeLists.txt:53` 全项目链接）；
+- 不改 Dcm 配置（arxml 的 DcmDspSecurityGetSeedFnc 回调名不变）、不改 CMake（`CryptoServ_Component` 已在 `cpj_baic/dia_cfg/CMakeLists.txt:53` 全项目链接）——⚠️ **2026-11-09 勘误：该链接当时仅 develop 存在（IDC310BAIC-1382 引入），B230 release 分支缺失导致 CI #1519582 编译失败，已补链修复（commit 76c947086 / PR #1897），详见 [docs/analysis/2026-11-09-IDC310BAIC-1429-n60-b230-cryptoserv-build-fix.md](../analysis/2026-11-09-IDC310BAIC-1429-n60-b230-cryptoserv-build-fix.md)**；
 - 不改 Key/Seed 长度、KeyFactor、AES-CMAC 校验算法。
 
 ### 1.3 术语与缩略语
