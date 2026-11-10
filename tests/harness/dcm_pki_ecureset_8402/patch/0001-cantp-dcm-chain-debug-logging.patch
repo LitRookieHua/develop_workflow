@@ -1,0 +1,310 @@
+35b07f7ac feat(diag): [IDC310GAC-8553] GAC T09Y add CanTp/Dcm chain debug logging for 1101 zero-response analysis
+From 35b07f7ac01130208f099d0ecd8b67c2acea6cb9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hua=20Yao/=E5=A7=9A=E5=8D=8E?= <Hua.Yao@imotion.ai>
+Date: Wed, 4 Nov 2026 13:55:07 +0800
+Subject: [PATCH] feat(diag): [IDC310GAC-8553] GAC T09Y add CanTp/Dcm chain
+ debug logging for 1101 zero-response analysis
+
+Add T09PATCH P1 instrumentation (Log_FunSync, A-core sync log) on the
+diagnostic RX/TX path to locate the intermittent request black hole
+(IDC310GAC-8402, ~1/895 during PKI stress):
+
+- CanTp.c: RxIndication entry / Transmit entry / TxConfirmation logs
+  (CTP RXI/TXQ/TXC), tester-present 3E80 filtered
+- CanTp_Prv.c: GetConnectionAcceptance silent-reject branches for SF/FF
+  (CTP SFREJ/FFREJ, dumps channel sub-state - prime suspect) and
+  PduR CanTpStartOfReception return codes (CTP SOR/FF SOR)
+- Dcm_Dsl_StartOfReception.c: DSL entry/return and busy-gate logs
+  (DCM SOR/SORRET/BUSY), tester-present filtered
+- Dcm_Dsl_ResponseTransmission.c: response submit and
+  PduR_DcmTransmit result logs (DCM TXR/TXRD)
+
+Baseline: release/GAC/T09_Y1_D126/G710 (68e497b4).
+---
+ .../t09/BswRta/src/bsw/CanTp/src/CanTp.c      | 41 ++++++++++++++++++
+ .../t09/BswRta/src/bsw/CanTp/src/CanTp_Prv.c  | 43 +++++++++++++++++++
+ .../Dcm_Reception/Dcm_Dsl_StartOfReception.c  | 41 ++++++++++++++++++
+ .../Dcm_Dsl_ResponseTransmission.c            | 24 ++++++++++-
+ 4 files changed, 148 insertions(+), 1 deletion(-)
+
+diff --git a/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp.c b/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp.c
+index 6d718b026..cb9cd014e 100644
+--- a/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp.c
++++ b/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp.c
+@@ -13,6 +13,11 @@
+ #include "CanTp_Cbk.h"
+ #include "CanTp_Prv.h" /* TRACE[SWS_CanTp_00156] Indirect inclusion CanTp_Cfg.h[through CanTp.h] SchM_CanTp.h Det.h */
+ 
++/* <T09PATCH P1> IDC310GAC-8402: debug logging for diag RX/TX black-hole analysis (Log_FunSync = LogSyncAcoreOnly) */
++extern void Log_FunSync(uint8 outputTarget, const char *fmt, ...);
++#define CANTP_T09_IS_TESTERPRESENT(d)  ( ((d)[0] & 0xF0u) == 0x00u && (d)[1] == 0x3Eu && (d)[2] == 0x80u )
++/* </T09PATCH P1> */
++
+ #define CANTP_START_SEC_VAR_CLEARED_8
+ #include "CanTp_MemMap.h"
+ /* TRACE[SWS_CanTp_00253][SWS_CanTp_00168]TRACE[SWS_CanTp_00161] Defined as global variable available for debugging */
+@@ -252,6 +257,19 @@ Std_ReturnType CanTp_Transmit(PduIdType CanTpTxPduId, const PduInfoType *CanTpTx
+     const CanTp_TxSduType *Connection;
+     CanTp_ChannelType *Channel;
+ 
++    /* <T09PATCH P1> */
++    if((CanTpTxInfoPtr != NULL_PTR) && (CanTpTxInfoPtr->SduLength >= 1u))
++    {
++        Log_FunSync(1U, "CTP TXQ id=%d len=%d d0=%02x d1=%02x d2=%02x main=%d\r\n",
++                    (int)CanTpTxPduId,
++                    (int)CanTpTxInfoPtr->SduLength,
++                    (int)CanTpTxInfoPtr->SduDataPtr[0],
++                    (int)((CanTpTxInfoPtr->SduLength > 1u) ? CanTpTxInfoPtr->SduDataPtr[1] : 0u),
++                    (int)((CanTpTxInfoPtr->SduLength > 2u) ? CanTpTxInfoPtr->SduDataPtr[2] : 0u),
++                    (int)CanTp_MainState);
++    }
++    /* </T09PATCH P1> */
++
+     /* TRACE[SWS_CanTp_00031] */
+     if(CanTp_Prv_MainStateCheck(CANTP_TRANSMIT))   /* TRACE[SWS_CanTp_00238] */
+     {
+@@ -485,6 +503,13 @@ void CanTp_TxConfirmation(PduIdType TxPduId, Std_ReturnType result)
+     const CanTp_TxSduType *TxConnection;
+     (void)result;
+ 
++    /* <T09PATCH P1> */
++    Log_FunSync(1U, "CTP TXC id=%d res=%d main=%d\r\n",
++                (int)TxPduId,
++                (int)result,
++                (int)CanTp_MainState);
++    /* </T09PATCH P1> */
++
+     /* TRACE[SWS_CanTp_00031] */
+     if(CanTp_Prv_MainStateCheck(CANTP_TXCONFIRMATION))  /* TRACE[SWS_CanTp_00238] */
+     {
+@@ -626,6 +651,22 @@ void CanTp_RxIndication(PduIdType RxPduId, const PduInfoType *PduInfoPtr)
+                 }
+                 else
+                 {   /* Frame Processing based on Context updated in CanTp_Prv_GetRxContext and CanTp_Prv_RxSduLengthCheck */
++                    /* <T09PATCH P1> */
++                    if((PduInfoPtr->SduLength >= 3u) &&
++                       (FALSE == CANTP_T09_IS_TESTERPRESENT(PduInfoPtr->SduDataPtr)))
++                    {
++                        Log_FunSync(1U, "CTP RXI rxid=%d ch=%d sub=%d fd=%d d0=%02x d1=%02x d2=%02x d3=%02x dl=%d\r\n",
++                                    (int)RxPduId,
++                                    (int)Context.ChannelId,
++                                    (int)CanTp_SubState[Context.ChannelId],
++                                    (int)Context.IsFdEnabled,
++                                    (int)PduInfoPtr->SduDataPtr[0],
++                                    (int)PduInfoPtr->SduDataPtr[1],
++                                    (int)PduInfoPtr->SduDataPtr[2],
++                                    (int)((PduInfoPtr->SduLength > 3u) ? PduInfoPtr->SduDataPtr[3] : 0u),
++                                    (int)PduInfoPtr->SduLength);
++                    }
++                    /* </T09PATCH P1> */
+                     CanTp_Prv_ProcessFrame(&Context, PduInfoPtr);
+                     /* If burst mode is enabled then activate state function directly. */
+                     CanTp_Prv_BurstMainFunction(Context.ChannelId, CANTP_TRIGGER_RX_INDICATION);
+diff --git a/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp_Prv.c b/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp_Prv.c
+index 4add3b183..597c1996d 100644
+--- a/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp_Prv.c
++++ b/cpj_gac/autosar/t09/BswRta/src/bsw/CanTp/src/CanTp_Prv.c
+@@ -12,6 +12,11 @@
+ #include "CanTp_Cbk.h"
+ #include "CanTp_Prv.h"
+ 
++/* <T09PATCH P1> IDC310GAC-8402: debug logging for silent-frame-drop black-hole analysis (Log_FunSync = LogSyncAcoreOnly) */
++extern void Log_FunSync(uint8 outputTarget, const char *fmt, ...);
++#define CANTP_T09_IS_TP_PAYLOAD(p)  ( (p)[0] == 0x3Eu && (p)[1] == 0x80u )
++/* </T09PATCH P1> */
++
+ #define CANTP_START_SEC_VAR_CLEARED_UNSPECIFIED
+ #include "CanTp_MemMap.h"
+ CanTp_ChannelType CanTp_Channel[CANTP_MAX_CHANNEL_SIZE];
+@@ -178,6 +183,16 @@ static void CanTp_Prv_ProcessRxSingleFrame(const CanTp_RxContextType *Context, c
+             /* TRACE[SWS_CanTp_00079][SWS_CanTp_00329] */
+             RetValue = PduR_CanTpStartOfReception(Context->PduRPduHandleId, &SduInfo, Context->SduLength, &RemBufSize);
+ 
++            /* <T09PATCH P1> */
++            if(!((Context->SduLength >= 2u) && CANTP_T09_IS_TP_PAYLOAD(SduInfo.SduDataPtr)))
++            {
++                Log_FunSync(1U, "CTP SOR rxid=%d ret=%d rem=%d\r\n",
++                            (int)Context->PduId,
++                            (int)RetValue,
++                            (int)RemBufSize);
++            }
++            /* </T09PATCH P1> */
++
+             switch(RetValue)
+             {
+                 case BUFREQ_OK:
+@@ -214,6 +229,16 @@ static void CanTp_Prv_ProcessRxSingleFrame(const CanTp_RxContextType *Context, c
+         }
+         else
+         {
++                /* <T09PATCH P1> SF rejected silently (channel busy in another state) - the suspected black-hole point */
++                Log_FunSync(1U, "CTP SFREJ rxid=%d ch=%d sub=%d act=%d tp=%d d0=%02x d1=%02x\r\n",
++                            (int)Context->PduId,
++                            (int)Context->ChannelId,
++                            (int)CanTp_SubState[Context->ChannelId],
++                            (int)Channel->ActiveSduId,
++                            (int)((Context->SduLength >= 2u) && CANTP_T09_IS_TP_PAYLOAD(SduInfo.SduDataPtr)),
++                            (int)SduInfo.SduDataPtr[0],
++                            (int)((Context->SduLength > 1u) ? SduInfo.SduDataPtr[1] : 0u));
++                /* </T09PATCH P1> */
+                 SchM_Exit_CanTp_EXCLUSIVE_AREA(); /* Exit canTp canTp Exclusive Area section to avoid unnecessary locking in else condition of if statement */
+         }
+     }
+@@ -283,6 +308,14 @@ static void CanTp_Prv_ProcessRxFirstFrame(const CanTp_RxContextType *Context, co
+             /* TRACE[SWS_CanTp_00079][SWS_CanTp_00329][SWS_CanTp_00277] */
+             RetValue = PduR_CanTpStartOfReception(Context->PduRPduHandleId, &SduInfo, Context->SduLength, &RemBufSize);
+ 
++            /* <T09PATCH P1> */
++            Log_FunSync(1U, "CTP FF SOR rxid=%d ret=%d rem=%d len=%d\r\n",
++                        (int)Context->PduId,
++                        (int)RetValue,
++                        (int)RemBufSize,
++                        (int)Context->SduLength);
++            /* </T09PATCH P1> */
++
+ 
+             switch(RetValue) /* TRACE[SWS_CanTp_00064] */
+             {
+@@ -370,6 +403,16 @@ static void CanTp_Prv_ProcessRxFirstFrame(const CanTp_RxContextType *Context, co
+         }
+         else
+         {
++            /* <T09PATCH P1> FF rejected silently (channel busy in another state) - the suspected black-hole point */
++            Log_FunSync(1U, "CTP FFREJ rxid=%d ch=%d sub=%d act=%d d0=%02x d1=%02x len=%d\r\n",
++                        (int)Context->PduId,
++                        (int)Context->ChannelId,
++                        (int)CanTp_SubState[Context->ChannelId],
++                        (int)Channel->ActiveSduId,
++                        (int)SduInfo.SduDataPtr[0],
++                        (int)((SduInfo.SduLength > 1u) ? SduInfo.SduDataPtr[1] : 0u),
++                        (int)Context->SduLength);
++            /* </T09PATCH P1> */
+             SchM_Exit_CanTp_EXCLUSIVE_AREA();  /* Exit canTp canTp Exclusive Area section to avoid unnecessary locking in else condition of if statement */
+         }
+     }
+diff --git a/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Reception/Dcm_Dsl_StartOfReception.c b/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Reception/Dcm_Dsl_StartOfReception.c
+index 2de962846..72a84413a 100644
+--- a/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Reception/Dcm_Dsl_StartOfReception.c
++++ b/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Reception/Dcm_Dsl_StartOfReception.c
+@@ -18,6 +18,11 @@
+ #include "Dcm.h"
+ #include "Dcm_Prv.h"
+ 
++/* <T09PATCH P1> IDC310GAC-8402: debug logging for diag RX black-hole analysis (Log_FunSync = LogSyncAcoreOnly) */
++extern void Log_FunSync(uint8 outputTarget, const char *fmt, ...);
++#define DCM_T09_IS_TP_PAYLOAD(p)  ( (p)[0] == 0x3Eu && (p)[1] == 0x80u )
++/* </T09PATCH P1> */
++
+ /*
+  **********************************************************************************************************************
+  * Variables
+@@ -732,6 +737,16 @@ static BufReq_ReturnType Dcm_ProcessNewRequest (PduIdType dcmRxPduId, const PduI
+          *  OR (Dcm is Busy Processing a Request)*/
+         if(Dcm_Prv_IsDslBusyWithRequest(dcmRxPduId,&isReqFromSameConn))
+         {
++            /* <T09PATCH P1> DSL busy gate hit - request queued as NRC21 or preemption */
++            if((info != NULL_PTR) && !((info->SduLength >= 2u) && (TRUE == DCM_T09_IS_TP_PAYLOAD(info->SduDataPtr))))
++            {
++                Log_FunSync(1U, "DCM BUSY id=%d same=%d d0=%02x d1=%02x\r\n",
++                            (int)dcmRxPduId,
++                            (int)isReqFromSameConn,
++                            (int)((info->SduLength > 0u) ? info->SduDataPtr[0] : 0u),
++                            (int)((info->SduLength > 1u) ? info->SduDataPtr[1] : 0u));
++            }
++            /* </T09PATCH P1> */
+             bufRequestStatus_en= Dcm_ProcessRequestWhileDslBusy(dcmRxPduId,tpSduLength,isReqFromSameConn);
+             if(BUFREQ_OK==bufRequestStatus_en)
+             {
+@@ -1014,6 +1029,26 @@ BufReq_ReturnType Dcm_StartOfReception (
+ {
+     BufReq_ReturnType bufRequestStatus_en = BUFREQ_E_NOT_OK;
+     Dcm_MsgLenType bufferSize;
++    /* <T09PATCH P1> */
++    if((info != NULL_PTR) && (info->SduLength >= 2u) && (TRUE == DCM_T09_IS_TP_PAYLOAD(info->SduDataPtr)))
++    {
++        /* tester-present keepalive: skip entry/exit logs to avoid flooding */
++    }
++    else if(info != NULL_PTR)
++    {
++        Log_FunSync(1U, "DCM SOR id=%d len=%d d0=%02x d1=%02x d2=%02x d3=%02x\r\n",
++                    (int)id,
++                    (int)tpSduLength,
++                    (int)info->SduDataPtr[0],
++                    (int)((info->SduLength > 1u) ? info->SduDataPtr[1] : 0u),
++                    (int)((info->SduLength > 2u) ? info->SduDataPtr[2] : 0u),
++                    (int)((info->SduLength > 3u) ? info->SduDataPtr[3] : 0u));
++    }
++    else
++    {
++        Log_FunSync(1U, "DCM SOR id=%d nullinfo len=%d\r\n", (int)id, (int)tpSduLength);
++    }
++    /* </T09PATCH P1> */
+     /* check all prameters are valid */
+     if ((BUFREQ_OK== Dcm_Prv_CheckEnvironment(id,info,bufferSizePtr)))
+     {
+@@ -1036,6 +1071,12 @@ BufReq_ReturnType Dcm_StartOfReception (
+             }
+         }
+     }
++    /* <T09PATCH P1> */
++    if(!((info != NULL_PTR) && (info->SduLength >= 2u) && (TRUE == DCM_T09_IS_TP_PAYLOAD(info->SduDataPtr))))
++    {
++        Log_FunSync(1U, "DCM SORRET id=%d ret=%d\r\n", (int)id, (int)bufRequestStatus_en);
++    }
++    /* </T09PATCH P1> */
+     return (bufRequestStatus_en);
+ }
+ 
+diff --git a/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Transmission/Dcm_Dsl_ResponseTransmission.c b/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Transmission/Dcm_Dsl_ResponseTransmission.c
+index f57c05e5c..53d1ec223 100644
+--- a/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Transmission/Dcm_Dsl_ResponseTransmission.c
++++ b/cpj_gac/autosar/t09/BswRta/src/bsw/Dcm/src/Dsl/Dcm_Transmission/Dcm_Dsl_ResponseTransmission.c
+@@ -19,6 +19,10 @@
+ #include "ComM_Dcm.h"
+ #include "Dcm_Prv.h"
+ 
++/* <T09PATCH P1> IDC310GAC-8402: debug logging for DCM->CanTp TX path black-hole analysis (Log_FunSync = LogSyncAcoreOnly) */
++extern void Log_FunSync(uint8 outputTarget, const char *fmt, ...);
++/* </T09PATCH P1> */
++
+ /*
+  **********************************************************************************************************************
+  * Variables
+@@ -670,15 +674,33 @@ Std_ReturnType Dcm_Prv_SendForcePendingResponse(void)
+ void Dcm_Prv_SendResponse(const PduInfoType * PduInfoPcst)
+ {
+     uint32 dataTimeOutMonitor_u32;
++    /* <T09PATCH P1> */
++    Std_ReturnType t09TxRet;
++    if((PduInfoPcst != NULL_PTR) && (PduInfoPcst->SduLength >= 1u))
++    {
++        Log_FunSync(1U, "DCM TXR len=%d d0=%02x d1=%02x d2=%02x\r\n",
++                    (int)PduInfoPcst->SduLength,
++                    (int)PduInfoPcst->SduDataPtr[0],
++                    (int)((PduInfoPcst->SduLength > 1u) ? PduInfoPcst->SduDataPtr[1] : 0u),
++                    (int)((PduInfoPcst->SduLength > 2u) ? PduInfoPcst->SduDataPtr[2] : 0u));
++    }
++    /* </T09PATCH P1> */
+     if(TRUE==DCM_CHKFULLCOMM_MODE(Dcm_Prv_GetActiveComMChannelIndex(Dcm_RxPduIdInProcess)))
+     {
+-        if(E_NOT_OK == PduR_DcmTransmit(Dcm_Prv_GetTxPduId(Dcm_RxPduIdInProcess), PduInfoPcst))
++        /* <T09PATCH P1> */
++        t09TxRet = PduR_DcmTransmit(Dcm_Prv_GetTxPduId(Dcm_RxPduIdInProcess), PduInfoPcst);
++        Log_FunSync(1U, "DCM TXRD ret=%d\r\n", (int)t09TxRet);
++        if(E_NOT_OK == t09TxRet)
+         {
+             Dcm_Dsl_ResponseTypeCheck();
+         }
++        /* </T09PATCH P1> */
+     }
+     else
+     {
++        /* <T09PATCH P1> full-comm not active: response deferred (P2 check / retransmission registration) */
++        Log_FunSync(1U, "DCM TXRD full=0\r\n");
++        /* </T09PATCH P1> */
+         SchM_Enter_Dcm_DsldTimer();
+         dataTimeOutMonitor_u32 = Dcm_Prv_Get_DataTimeOut(Dcm_ReqIndexInProcess);
+         DCM_TimerProcess(dataTimeOutMonitor_u32,Dcm_P2OrS3StartTick_u32,Dcm_P2OrS3TimerStatus_uchr)
+-- 
+2.50.1
+

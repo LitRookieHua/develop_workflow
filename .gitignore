@@ -10,6 +10,9 @@ __pycache__/
 logs/
 *.log
 
+# CAN 总线取证大文件（GB 级 BLF 只留本地）
+*.blf
+
 # Trace32Debug：运行时连接/ELF 缓存（所有层级）
 .t32/
 
