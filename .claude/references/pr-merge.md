@@ -4,10 +4,12 @@ reviewers 漏加 PR 就废（补加要走 PR 编辑接口且必须带 version）
 
 ## 0. PR 创建（Bitbucket Server REST API 1.0，也可用 `/bb` 技能）
 
+- `POST https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/<PROJ>/repos/<repo>/pull-requests`
 - 认证：Bearer token（`BBDC-` 前缀），在 `C:\Users\YH\.claude\mcp.json` 的 `bitbucket-mcu_app_tda4.env.BITBUCKET_API_TOKEN`
-- `POST https://bitbucket.imotion.ai:7990/rest/api/1.0/projects/MCU/repos/<repo>/pull-requests`
+- **项目 key（2026-11-10 D1CYC-3343 实测）**：mcu 仓库 → `MCU`；**zos_msg → `ZOS`（不是 MCU，用 MCU 会 404）**；不确定时 `GET /rest/api/1.0/repos?name=<repo>` 查 `project.key`
 - 仓库：TDA4 → `mcu_app_tda4`；J6 → `mcu_app_j6` 或 `mcu_app_j6_v2`（按工作区选定的仓库）
-- 请求体：`{"title": "<commit 标题>", "description": "<commit 完整内容>", "fromRef": {"id": "refs/heads/<feature分支>"}, "toRef": {"id": "refs/heads/develop"}, "reviewers": [...按 §1 名单...]}`
+- 请求体：`{"title": "<commit 标题>", "description": "<commit 完整内容>", "fromRef": {"id": "refs/heads/<feature分支>"}, "toRef": {"id": "refs/heads/develop"}, "reviewers": [{"user": {"name": "<用户名>"}}, ...]}`
+  - ⚠️ reviewers 元素必须是 `{"user": {"name": ...}}` 嵌套格式，直接写 `{"name": ...}` 会 400（`reviewers[0].user must be supplied`，2026-11-11 D3ACYI-2354 实测）
 - release 分支的 feature 分支，PR 的 `toRef` 为对应 release 分支（如 `refs/heads/release/Chery/V2XEU_D065/V460`）
 - **PR 标题 = commit 标题，PR 内容 = commit 内容**
 - **多仓库依赖顺序（zos_msg / version_did / mcu 同时修改时，2026-10-22 用户确认）**：MCU 代码 PR **必须等 zos_msg 与 version_did 的 PR 全部 merge 后再创建**（MCU 提交依赖这两个仓库，CI 用目标分支的依赖仓库组合构建，提前 PR 会因新枚举/新表不在目标分支而 CI 失败）；zos_msg 与 version_did 互不依赖，可同时 PR。交付流程：三仓库 commit/push 一起做，但只创建 zos_msg/version_did 的 PR 并通知监控，全部 MERGED 后再创建 MCU PR（此时依赖已进目标分支，CI 直接可过，无需重触发）
