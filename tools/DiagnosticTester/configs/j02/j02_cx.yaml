@@ -1,0 +1,40 @@
+can:
+  device: CX-USBCANFD
+  channel: 0
+  fd: true
+  baudrate: 500000
+  data_baudrate: 2000000
+
+diagnostic:
+  request_id: 0x754
+  response_id: 0x75C
+  functional_id: 0x7DF
+
+timing:
+  p2_ms: 200
+  p2star_ms: 5000
+  step_delay_ms: 100
+
+security:
+  # J02 OEM《通用诊断规范:诊断安全防护机制》v2.0（对照 cpj_fawvw/dia_cfg/src/0x27/
+  # ov_dia_0x27_security_access.cpp）：key = Extract12(AES128(Seed12B||Mask4B ⊕ IV))
+  # AES 密钥/IV 为 ASCII 串（SEC_AESKEY1/2、SEC_IV），Mask 暂用规范 4.2 示例值
+  app:
+    seed_sub: 0x03
+    key_sub: 0x04
+    algorithm: j02_oem_cbc
+    params:
+      aes_key: "37316639616B356C3565386434673368"  # "71f9ak5l5e8d4g3h"（第8字符小写 l）
+      iv: "363066356237396D6434736536673868"       # "60f5b79md4se6g8h"
+      mask: "691B3F23"
+      key_order: "07020F05090001060B040E08"
+  boot:
+    seed_sub: 0x11
+    key_sub: 0x12
+    algorithm: j02_oem_cbc
+    params:
+      aes_key: "38366165356A316B733066676B326339"  # "86ae5j1ks0fgk2c9"
+      iv: "363066356237396D6434736536673868"       # "60f5b79md4se6g8h"
+      mask: "9518D8C4"
+      key_order: "030B00010609040F0C0E0507"
+  # develop 等级用内置默认（27 61/62：16B 魔数取种子，密钥 = AES-CMAC(DEV_KEY, seed)）

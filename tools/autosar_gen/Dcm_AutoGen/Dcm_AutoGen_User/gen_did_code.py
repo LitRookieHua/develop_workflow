@@ -32,11 +32,13 @@ MARK_SOURCE = "source: UDS Diagnostic Questionnaire DID List"
 
 # NvmDid 语义映射: DID → 现有 pdm Z block (None = 无对应 block)
 NVM_BLOCK_MAP = {
-    0xF190: "Z003_VIN",
-    0xF15A: "Z004_FingerPrint",
-    0xF18C: "Z002_ECUSerialNumber",
-    0xF15B: "Z004_FingerPrint",
-    0x2EE2: None,
+    0xF190: "Z007_VIN",
+    0xF15A: "Z008_FingerPrint",
+    0xF18C: "Z006_ECUSerialNumber",
+    0xF15B: "Z008_FingerPrint",
+    0x2EE2: "Z012_ComponentZDCID",
+    0xF1A3: "Z013_EcuHwVersionNumber",
+    0x2A18: "Z014_PcbaSN",
 }
 
 # version_did 模板 (templates/version_did.cpp.in) 中有 g_DidData_<DID>_au8 数组的 DID 集合
@@ -48,7 +50,7 @@ VERSION_DID_LANDING = {
     "F112", "F17F", "F180", "F181", "F183", "F184", "F187", "F188", "F189",
     "F18A", "F18B", "F18C", "F18E", "F191", "F192", "F193", "F194", "F195",
     "F197", "F19E", "F1A0", "F1A1", "F1A2", "F1B0", "F1B1", "F1B2", "F1B3",
-    "F1B6", "F1C8", "F1D9", "F1EF", "F289", "F301",
+    "F1B6", "F1C8", "F1D9", "F1E8", "F1E9", "F1EF", "F289", "F301",
 }
 
 SESSION_ORDER = ["DEFAULT", "PROGRAMMING", "EXTENDED"]
@@ -60,7 +62,7 @@ VALID_SEC = {
     "E_DIA_SECLEVEL_PROGRAMMING_UNLOCK", "E_DIA_SECLEVEL_DEVELOPMENT_UNLOCK",
     "E_DIA_SECLEVEL_LOCK_NORMAL_UNLOCK", "E_DIA_SECLEVEL_LOCK_PROGRAMMING_UNLOCK",
     "E_DIA_SECLEVEL_NORMAL_PROGRAMMING_UNLOCK", "E_DIA_SECLEVEL_LOCK_NORMAL_PROGRAMMING_UNLOCK",
-    "E_DIA_SECLEVEL_LOCK_NORMAL_DEVELOPMENT_UNLOCK",
+    "E_DIA_SECLEVEL_NORMAL_DEVELOPMENT_UNLOCK", "E_DIA_SECLEVEL_LOCK_NORMAL_DEVELOPMENT_UNLOCK",
     "E_DIA_SECLEVEL_LOCK_NORMAL_PROGRAMMING_DEVELOPMENT_UNLOCK",
 }
 

@@ -146,6 +146,17 @@ def _key_gac_shift_xor(seed: bytes, params: dict, df: bytes | None) -> bytes:
     return k.to_bytes(4, "big")
 
 
+def _key_j02_oem_cbc(seed: bytes, params: dict, df: bytes | None) -> bytes:
+    """J02 OEM《通用诊断规范》v2.0（对照 ov_dia_0x27_security_access.cpp secCalculateKey）：
+    Input = Seed(12B) || Mask(4B)，⊕IV 后 AES128 单块加密，按 key_order 下标提取 12 字节。"""
+    from cryptography.hazmat.primitives.ciphers import Cipher, modes
+    inp = seed + params["mask"]
+    xored = bytes(a ^ b for a, b in zip(inp, params["iv"]))
+    enc = Cipher(algorithms.AES(params["aes_key"]), modes.ECB()).encryptor()
+    out = enc.update(xored) + enc.finalize()
+    return bytes(out[i] for i in params["key_order"])
+
+
 # 算法注册表：计算函数 + 固有 (seed_len, key_len) + params 键 → hex 字节数
 # （mask_table 特殊：16 项 u32 列表；optional_params 可省略）
 ALGORITHMS: dict[str, dict] = {
@@ -162,6 +173,9 @@ ALGORITHMS: dict[str, dict] = {
                      "params": {}},
     "gac_shift_xor": {"key": _key_gac_shift_xor, "seed_len": 4, "key_len": 4,
                       "params": {"constant": 4}},
+    "j02_oem_cbc": {"key": _key_j02_oem_cbc, "seed_len": 12, "key_len": 12,
+                    "params": {"aes_key": 16, "iv": 16, "mask": 4,
+                               "key_order": 12}},
 }
 
 
