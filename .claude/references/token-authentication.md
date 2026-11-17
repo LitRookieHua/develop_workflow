@@ -21,7 +21,7 @@ Token 存放位置、认证方式、踩坑规则（权威源）。安全底线�
 
 ## Bitbucket（bitbucket.imotion.ai:7990）
 
-- **Token 存放**：`C:\Users\YH\.claude\mcp.json` 的 `mcpServers.bitbucket-mcu_app_tda4.env.BITBUCKET_API_TOKEN`（`BBDC-` 前缀）
+- **Token 存放**：`C:\Users\YH\.claude\mcp.json` 顶层键 `bitbucket-mcu_app_tda4`（不在 `mcpServers` 下）的 `env.BITBUCKET_API_TOKEN`（`BBDC-` 前缀；2026-11-10 实测修正：按 `mcpServers.` 路径取会落空）
 - **认证方式**：`Authorization: Bearer <BBDC-...>`
 - **常用端点**（REST 1.0）：`/rest/api/1.0/projects/<PROJ>/repos/<repo>/pull-requests`（POST 建 PR）、`.../pull-requests/<id>`（GET 状态 / POST merge）、`.../activities`（评审意见）
 
