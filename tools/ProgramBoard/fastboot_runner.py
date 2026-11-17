@@ -16,13 +16,31 @@ class FastbootError(Exception):
 
 def find_bash() -> str:
     p = shutil.which("bash")
-    if p:
+    if p and "system32" not in p.lower() and "windowsapps" not in p.lower():
         return p
-    for cand in (r"C:\Program Files\Git\bin\bash.exe",
+    for cand in (r"D:\Program Files\Git\bin\bash.exe",
+                 r"C:\Program Files\Git\bin\bash.exe",
                  r"C:\Program Files (x86)\Git\bin\bash.exe"):
         if os.path.isfile(cand):
             return cand
-    raise FastbootError("找不到 bash——请安装 Git for Windows 或将其加入 PATH")
+    raise FastbootError("找不到 Git Bash——请安装 Git for Windows 或将其加入 PATH")
+
+
+def _posix_path_env(env):
+    """python.exe 继承的是 Windows 格式 PATH（C:\\...;C:\\...），bash 无法解析其中的
+    反斜杠条目导致 fastboot: command not found。转换为 /c/... : /d/... 格式。"""
+    p = env.get("PATH", "")
+    if ";" not in p:
+        return
+    out = []
+    for part in p.split(";"):
+        if not part:
+            continue
+        part = part.replace("\\", "/")
+        if len(part) >= 2 and part[1] == ":":
+            part = "/" + part[0].lower() + part[2:]
+        out.append(part)
+    env["PATH"] = ":".join(out)
 
 
 def run_fastboot(args, target: str, log, timeout: float = FASTBOOT_TIMEOUT_S):
@@ -30,11 +48,12 @@ def run_fastboot(args, target: str, log, timeout: float = FASTBOOT_TIMEOUT_S):
     成功返回 True，失败/超时抛 FastbootError。"""
     cmd_str = "fastboot " + " ".join(shlex.quote(a) for a in args)
     env = os.environ.copy()
+    _posix_path_env(env)
     env["ANDROID_SERIAL"] = target
     log(f"$ {cmd_str}  (ANDROID_SERIAL={target})")
 
     proc = subprocess.Popen(
-        ["bash", "-lc", cmd_str], env=env,
+        [find_bash(), "-lc", cmd_str], env=env,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     output = []
 
