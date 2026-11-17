@@ -30,7 +30,7 @@ JIRA 单的创建与状态流转统一权威源。其他地方涉及 JIRA 操作
 | Implements_JRQ | `issuelinks` | 选填 | 链接需求单（type `implemented`） |
 | Link to Problems | `issuelinks` | 选填 | 链接问题单（type `is solved by`） |
 
-已配置项目：**IDC310GAC**（含 fixVersion 换算规则、变体示例、模板单 7833）、**D3ACYI / F4CMC / D1CYC / IDC310BAIC**（参数取自各项目 Story 模板单，components 均为 `sw-cp`）。其他项目参数后续总结时补进配置文件。
+已配置项目：**IDC310GAC**（含 fixVersion 换算规则、变体示例、模板单 7833）、**D3ACYI / F4CMC / D1CYC / IDC310BAIC**（参数取自各项目 Story 模板单，components 均为 `sw-cp`）、**C097FAWVW**（J02 项目，含 Problem 类型实测参数：screen 无 description 字段、正文放 customfield_12007）。其他项目参数后续总结时补进配置文件。
 
 ### 1.3 创建步骤
 
@@ -113,3 +113,4 @@ OPEN（开启/新建）→ IN_PROGRESS（进行中/开发中）→ RESOLVED（�
 1. **fixVersions 必须传单子所属项目的版本 id**：同名版本在不同项目 id 不同（实例：`T09-Y_G710v6_260915` 在 IDC310GAC 项目是 27818，传成其他项目的 27445 报无效值）。先 `GET /rest/api/2/issue/<key>?fields=fixVersions,versions` 或查项目版本列表拿本单项目的 id
 2. **旧单可能残留跨项目无效字段值，先归一再流转**：6886 实例——components 残留无效 id 16068（跨项目）、versions 残留 27445，直接流转 400。先 `PUT /rest/api/2/issue/<key>` 归一（components 改有效 id 如 Diagnostic=20703、versions 清空 `[]`），再走三步流转
 3. fixVersions 为必填不能传空——31 步报错时优先核对版本 id 归属，而非删字段
+4. **41 步要求关联 Story 先到已解决/关闭**：Linked Bugfix 指向的 Story 单状态必须是 Resolved/Closed，否则报 `Please to Linked Bugfix or Story issues with status of Resloved or Closed.`（2026-11-17 F4CMC-99/102/103 实测）——先走 Story 两步流转（4→5），再回问题单走 41

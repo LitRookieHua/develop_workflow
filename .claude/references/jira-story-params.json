@@ -47,13 +47,14 @@
       "summary": "英文标题（笔记 H1 同名）",
       "description": "正文",
       "components": [{"name": "sw-cp"}],
-      "fixVersions_note": "项目内版本名，固定 V2XEU_V460v1",
+      "fixVersions_note": "项目内版本名。⚠️ 取当前周期版本（2026-11-11 实测：V2XEU_V470v1_1106~1120；查 GET /rest/api/2/project/D3ACYI/versions 取未 released 且覆盖今天的），不用固定 V2XEU_V460v1——D3ACYI-1803（v6_1010~1020）与 D3ACYI-2354（v7→V470v1）两单均按当前周期版本创建成功",
       "duedate_rule": "创建日 + 7 天",
       "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"iCAR V2X EU-V25/V27 海外\"}]"], "note": "按问题单/需求单实际变体填"},
-      "assignee": {"name": "Hua.Yao"}
+      "assignee": {"name": "Hua.Yao"},
+      "issuelinks_note": "⚠️ D3ACYI 项目 create 请求体与 issue update 均拒绝 issuelinks 字段（screen 限制，2026-11-11 实测 400），issue 级 POST /issue/{key}/issuelinks 端点 404；必须用全局 POST /rest/api/2/issueLink 创建关联"
     },
     "issuelinks": "同 _general（implemented / is solved by，选填）",
-    "reference_ticket": "D3ACYI-1941（IDC300CHERY Story 模板单：fixVersion V2XEU_V460v1、components sw-cp、变体 iCAR V2X EU-V25/V27 海外）"
+    "reference_ticket": "D3ACYI-1941（IDC300CHERY Story 模板单：components sw-cp、变体 iCAR V2X EU-V25/V27 海外）"
   },
   "F4CMC": {
     "project": {"key": "F4CMC"},
@@ -99,5 +100,33 @@
     },
     "issuelinks": "同 _general（implemented / is solved by，选填）",
     "reference_ticket": "IDC310BAIC-1352（IDC310BAIC Story 模板单：fixVersion B230、components sw-cp、变体 BAIC N60）"
+  },
+  "C097FAWVW": {
+    "project": {"key": "C097FAWVW"},
+    "_note": "J02 项目（一汽捷达 C097 — Execution）。Story 参数取自模板单 C097FAWVW-23；Problem 参数为 2026-11-17 实测（C097FAWVW-27）",
+    "issuetype": {"id": "10001"},
+    "story_fields_required": {
+      "summary": "英文标题",
+      "description": "正文",
+      "components": [{"name": "sw-cp"}],
+      "fixVersions_note": "项目内版本名，如 I210v1/I240v1（查 GET /rest/api/2/project/C097FAWVW/versions）",
+      "duedate_rule": "创建日 + 7 天",
+      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"J02\"}]"], "note": "该项目唯一选项 J02"},
+      "assignee": {"name": "Hua.Yao"}
+    },
+    "problem_fields_required": {
+      "issuetype": {"id": "10902"},
+      "summary": "英文标题",
+      "customfield_12006_ProblemType": {"value": "Defect", "options": ["Defect", "Performance Issue", "Aftermarket issue", "Other"]},
+      "customfield_12007_ProblemDescription": "问题描述+复现步骤（英文/中文均可）；⚠️ Problem 类型 screen 上没有 description 字段，正文一律放此字段，传 description 会 400",
+      "components": [{"name": "sw-cp"}],
+      "customfield_11100_Origin": {"value": "Internal"},
+      "customfield_12539_Visible": {"value": "Internal only"},
+      "customfield_11101_Severity": {"options": ["S", "A", "B", "C"]},
+      "reporter": {"name": "Hua.Yao"},
+      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"J02\"}]"]},
+      "versions_note": "影响版本选填；项目版本 I210v1~I240v1 均已 released"
+    },
+    "reference_ticket": "C097FAWVW-23（FAWVW Story 模板单：components sw-cp、变体 J02）、C097FAWVW-27（Problem 实测单）"
   }
 }
