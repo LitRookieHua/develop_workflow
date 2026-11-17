@@ -344,7 +344,9 @@ DoCAN 在 DoIP 会话中请求   [DCM-MUTEX-007 / DCM-MUTEX-CLOSE]
 | :--- | :--- | :--- | :--- | :--- |
 | O1 | Acore 侧 IPC 契约(通道号/消息格式)未联调核对 | 双向链路可能不通 | Acore 团队 + 本模块 | 联调前 |
 | O2 | FAWVW 正式 UDS 清单(会话/安全矩阵、bypass DID)未定 | 0x27 35/36、bypass DID 范围待调整 | 需求方 | 待 FAWVW 下发 |
-| O3 | J02 板暂缺 | 刷写/台架验证/性能实测(§6.1)延后 | 硬件资源 | 待板到位 |
+| O3 | J02 板暂缺 | 刷写/台架验证/性能实测(§6.1)延后 | 硬件资源 | 待板到位(2026-11-14 已到位并完成验证) |
+| O4 | `IpcUdsSvc.cpp` bypass 链路三处遗留(2026-11-14 PR #435 OCR 评审 246191/246190/246273,已在 PR 回复 Resolve):① PENDING 无超时兜底、`UdsIpcAdpr_ReleaseChannel` 无调用方;② `IpcAdpr_Parse_UDS_Bypass_Inforamtion` 未注册进 `IpcAdpr_ChanRx_Cfg[]`;③ 回调校验上界 1024 > `rspBuffer` 512。当前 `UdsIpcAdpr_ServiceSend` 全仓无调用方、与 de09g 逐字节一致,链路不可达无运行时影响 | bypass 链路接通后需先修 | Acore 集成阶段 + 本模块 | O1 联调前 |
+| O5 | S3 超时释放走 OTA-stuck 看门狗兜底路径(`Dcm_ChannelMutex_NotifySessionTimeout` 与 de09g 一致无调用方,2026-11-14 PR #435 OCR 第三轮 246310 已回复 Resolve):DoIP tester 真实断链后,DoCAN 接管最长被拒窗口 ≈ S3 超时 5s + 看门狗阈值 5s(`PDUR_IPC_OTA_STUCK_WATCHDOG_MS`,互斥需求文档兜底条目定义)≈ 10s 后自愈。不在 DSL 会话回退点补接线(避免与量产参考 de09g 分叉,DCM 手工补丁最小化);若客户要求快速接管,可在 Acore 集成阶段降低看门狗阈值或补接线 | 断链后 DoCAN 接管延迟最长 ~10s | Acore 集成阶段评估 | O1 联调前 |
 
 ## 附录E:修改点清单(阶段 3 实际落地)
 
