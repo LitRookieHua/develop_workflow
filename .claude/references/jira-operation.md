@@ -108,6 +108,12 @@ OPEN（开启/新建）→ IN_PROGRESS（进行中/开发中）→ RESOLVED（�
 | 1 | `4` | 开放 → 处理中 | 无 |
 | 2 | `5` | 处理中 → 已解决 | 无（resolution 自动为完成） |
 
+#### Requirement 单 Reviewed → Implemented（CMCRXJ6B 项目实测，2026-11-18）
+
+| 步骤 | transition id | 流转 | 必填字段 |
+| --- | --- | --- | --- |
+| 1 | `261` | Reviewed → Implemented | 无（Linked Story 已解决即可，F4CMC-105 实测） |
+
 #### 流转 400 报错的排查链（2026-10-20 五张单实测踩坑）
 
 1. **fixVersions 必须传单子所属项目的版本 id**：同名版本在不同项目 id 不同（实例：`T09-Y_G710v6_260915` 在 IDC310GAC 项目是 27818，传成其他项目的 27445 报无效值）。先 `GET /rest/api/2/issue/<key>?fields=fixVersions,versions` 或查项目版本列表拿本单项目的 id
