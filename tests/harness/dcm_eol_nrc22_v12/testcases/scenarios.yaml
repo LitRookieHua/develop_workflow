@@ -1,0 +1,28 @@
+# CMCRXJ6B-1385 V1.2 验证场景（设计方案 §六）
+# expect.kind: positive = 31 01 FE 01 正响应（7101FE01）；nrc22 = 7F 31 22
+# BCM_PSG_AJAR / BCM_DRV_AJAR_PR 为 V1.2 已删除判据——置 1 仍应放行
+- name: TC01_三信号全0_放行
+  set: {}
+  expect: {kind: positive}
+- name: TC02_远光HIBEAM_ON置1_NRC22
+  set: {HIBEAM_ON: 1}
+  expect: {kind: nrc22}
+- name: TC03_近光LOBEAM_ON置1_NRC22
+  set: {LOBEAM_ON: 1}
+  expect: {kind: nrc22}
+- name: TC04_机盖HOOD_AJAR置1_NRC22
+  set: {HOOD_AJAR: 1}
+  expect: {kind: nrc22}
+- name: TC05_副驾车门置1_仍放行
+  set: {BCM_PSG_AJAR: 1}
+  expect: {kind: positive}
+- name: TC06_主驾车门置1_仍放行
+  set: {BCM_DRV_AJAR_PR: 1}
+  expect: {kind: positive}
+- name: TC07_双车门置1_仍放行
+  set: {BCM_PSG_AJAR: 1, BCM_DRV_AJAR_PR: 1}
+  expect: {kind: positive}
+- name: TC08_回归_默认会话拒绝0x31
+  set: {}
+  default_session: true
+  expect: {kind: negative_not_nrc22}
