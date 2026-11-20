@@ -101,6 +101,10 @@ OPEN（开启/新建）→ IN_PROGRESS（进行中/开发中）→ RESOLVED（�
 | 2 | `31` | In Analysis → Analyzed | `customfield_12017`（英文根因描述）+ `duedate` + `fixVersions` |
 | 3 | `41` | Analyzed → Implemented | `customfield_12305`（Link to Bugfix，easy-links 格式 `[{"key":"<story单号>"}]`，传字符串数组会报 expected Object） |
 
+> **项目工作流差异（2026-11-20 F4CMC-100/101 实测）**：IDC310GAC 项目链 Implemented 后还有「→ 已解决」流转；**F4CMC 项目 Problem 单到 Implemented 即终点**（只剩 Re-Open/Duplicated/Limitation，先例 F4CMC-99/102/103 均停在 Implemented）。F4CMC 的 31 步实测只必填 `customfield_12017` + `duedate`（fixVersions 未要求）。
+>
+> **customfield_12305 填法限制**：不能指向单子自身（easy-links 校验 `Cannot link to the issue itself`）；Problem 单无对应实施 Story 时需先建 Story（jira-story-params.json 参数）并流转已解决再回填——先例 F4CMC-100/101 → 新建 F4CMC-114（implemented 关联 CMCRXJ6B 需求单）。该字段在流转 body 直接填即可解除 41 步必填校验，事后也可 `PUT /issue/<key>` 单独改值；仅建 implemented issuelink 不满足校验。
+
 #### Story 单两步流转的 transition id（「开放」态无直接解决流转）
 
 | 步骤 | transition id | 流转 | 必填字段 |

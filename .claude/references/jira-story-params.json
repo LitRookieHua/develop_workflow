@@ -1,132 +1,302 @@
 {
-  "_meta": {
-    "description": "JIRA Story 创建参数配置（按项目分节）。权威源配套文档：.claude/references/jira-operation.md。新增项目时在顶层加一个项目 key 节，字段含义见配套文档第 1 节。",
-    "updated": "2026-10-21",
-    "note": "D3ACYI / F4CMC / D1CYC / IDC310BAIC 参数取自各项目 Story 模板单（见各节 reference_ticket），components 均为 sw-cp"
+ "_meta": {
+  "description": "JIRA Story 创建参数配置（按项目分节）。权威源配套文档：.claude/references/jira-operation.md。新增项目时在顶层加一个项目 key 节，字段含义见配套文档第 1 节。",
+  "updated": "2026-10-21",
+  "note": "D3ACYI / F4CMC / D1CYC / IDC310BAIC 参数取自各项目 Story 模板单（见各节 reference_ticket），components 均为 sw-cp"
+ },
+ "_general": {
+  "description": "通用基线（参照 IDC310GAC 实测提炼）。未配置的项目先按本节创建，遇 400 报错按字段逐项调整；解决后的实测参数沉淀到对应项目节。",
+  "project": {
+   "key": "<项目KEY，如 IDC310GAC>"
   },
-  "_general": {
-    "description": "通用基线（参照 IDC310GAC 实测提炼）。未配置的项目先按本节创建，遇 400 报错按字段逐项调整；解决后的实测参数沉淀到对应项目节。",
-    "project": {"key": "<项目KEY，如 IDC310GAC>"},
-    "issuetype": {"id": "10001"},
-    "fields_required": {
-      "summary": "英文标题（笔记 H1 同名）",
-      "description": "正文",
-      "components": [{"name": "Diagnostic"}],
-      "fixVersions": "项目内版本名,固定使用jira模板中的版本名",
-      "duedate": "创建日 + 7 天，格式 YYYY-MM-DD",
-      "customfield_15000_VehicleVariant": {"format": "数组", "example": "[{\"value\": \"GAC AY7\"}]", "note": "按问题单/需求单实际变体填，选项随项目配置变化"},
-      "assignee": {"name": "Hua.Yao"}
-    },
-    "issuelinks": {
-      "Implements_JRQ": {"type": "implemented", "outwardIssue": "需求单", "inwardIssue": "新 Story", "required": false},
-      "Link_to_Problems": {"type": "is solved by", "direction": "问题单 is solved by 新 Story", "required": false}
+  "issuetype": {
+   "id": "10001"
+  },
+  "fields_required": {
+   "summary": "英文标题（笔记 H1 同名）",
+   "description": "正文",
+   "components": [
+    {
+     "name": "Diagnostic"
     }
+   ],
+   "fixVersions": "项目内版本名,固定使用jira模板中的版本名",
+   "duedate": "创建日 + 7 天，格式 YYYY-MM-DD",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "example": "[{\"value\": \"GAC AY7\"}]",
+    "note": "按问题单/需求单实际变体填，选项随项目配置变化"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   }
   },
-  "IDC310GAC": {
-    "project": {"key": "IDC310GAC"},
-    "issuetype": {"id": "10001"},
-    "fields_required": {
-      "summary": "英文标题（笔记 H1 同名）",
-      "description": "正文",
-      "components": [{"name": "Diagnostic"}],
-      "fixVersions_note": "项目内版本名，固定 AY7_G020v1_251015 ",
-      "duedate_rule": "创建日 + 7 天",
-      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"GAC AY7\"}]", "[{\"value\": \"GAC T68\"}]"], "note": "按问题单/需求单实际变体填"},
-      "assignee": {"name": "Hua.Yao"}
-    },
-    "issuelinks": {
-      "Implements_JRQ": {"type": "implemented", "outwardIssue": "需求单", "inwardIssue": "新 Story", "required": false},
-      "Link_to_Problems": {"type": "is solved by", "direction": "问题单 is solved by 新 Story", "required": false}
-    },
-    "reference_ticket": "IDC310GAC-7833（模板单：fixVersion AY7_G020v1_251015、components Diagnostic）"
-  },
-  "D3ACYI": {
-    "project": {"key": "D3ACYI"},
-    "issuetype": {"id": "10001"},
-    "fields_required": {
-      "summary": "英文标题（笔记 H1 同名）",
-      "description": "正文",
-      "components": [{"name": "sw-cp"}],
-      "fixVersions_note": "项目内版本名。⚠️ 取当前周期版本（2026-11-11 实测：V2XEU_V470v1_1106~1120；查 GET /rest/api/2/project/D3ACYI/versions 取未 released 且覆盖今天的），不用固定 V2XEU_V460v1——D3ACYI-1803（v6_1010~1020）与 D3ACYI-2354（v7→V470v1）两单均按当前周期版本创建成功",
-      "duedate_rule": "创建日 + 7 天",
-      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"iCAR V2X EU-V25/V27 海外\"}]"], "note": "按问题单/需求单实际变体填"},
-      "assignee": {"name": "Hua.Yao"},
-      "issuelinks_note": "⚠️ D3ACYI 项目 create 请求体与 issue update 均拒绝 issuelinks 字段（screen 限制，2026-11-11 实测 400），issue 级 POST /issue/{key}/issuelinks 端点 404；必须用全局 POST /rest/api/2/issueLink 创建关联"
-    },
-    "issuelinks": "同 _general（implemented / is solved by，选填）",
-    "reference_ticket": "D3ACYI-1941（IDC300CHERY Story 模板单：components sw-cp、变体 iCAR V2X EU-V25/V27 海外）"
-  },
-  "F4CMC": {
-    "project": {"key": "F4CMC"},
-    "issuetype": {"id": "10001"},
-    "fields_required": {
-      "summary": "英文标题（笔记 H1 同名）",
-      "description": "正文",
-      "components": [{"name": "sw-cp"}],
-      "fixVersions_note": "项目内版本名，固定 M110",
-      "duedate_rule": "创建日 + 7 天",
-      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"CMC RX\"}]"], "note": "按问题单/需求单实际变体填"},
-      "assignee": {"name": "Hua.Yao"}
-    },
-    "issuelinks": "同 _general（implemented / is solved by，选填）",
-    "reference_ticket": "F4CMC-38（IFC4CMC Story 模板单：fixVersion M110、components sw-cp、变体 CMC RX）"
-  },
-  "D1CYC": {
-    "project": {"key": "D1CYC"},
-    "issuetype": {"id": "10001"},
-    "fields_required": {
-      "summary": "英文标题（笔记 H1 同名）",
-      "description": "正文",
-      "components": [{"name": "sw-cp"}],
-      "fixVersions_note": "项目内版本名，固定 T480v1.0",
-      "duedate_rule": "创建日 + 7 天",
-      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"JETOUR T1J FL3\"}]"], "note": "按问题单/需求单实际变体填"},
-      "assignee": {"name": "Hua.Yao"}
-    },
-    "issuelinks": "同 _general（implemented / is solved by，选填）",
-    "reference_ticket": "D1CYC-2345（IDC100CHERY Story 模板单：fixVersion T480v1.0、components sw-cp、变体 JETOUR T1J FL3）"
-  },
-  "IDC310BAIC": {
-    "project": {"key": "IDC310BAIC"},
-    "issuetype": {"id": "10001"},
-    "fields_required": {
-      "summary": "英文标题（笔记 H1 同名）",
-      "description": "正文",
-      "components": [{"name": "sw-cp"}],
-      "fixVersions_note": "项目内版本名，固定 B230",
-      "duedate_rule": "创建日 + 7 天",
-      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"BAIC N60\"}]"], "note": "按问题单/需求单实际变体填"},
-      "assignee": {"name": "Hua.Yao"}
-    },
-    "issuelinks": "同 _general（implemented / is solved by，选填）",
-    "reference_ticket": "IDC310BAIC-1352（IDC310BAIC Story 模板单：fixVersion B230、components sw-cp、变体 BAIC N60）"
-  },
-  "C097FAWVW": {
-    "project": {"key": "C097FAWVW"},
-    "_note": "J02 项目（一汽捷达 C097 — Execution）。Story 参数取自模板单 C097FAWVW-23；Problem 参数为 2026-11-17 实测（C097FAWVW-27）",
-    "issuetype": {"id": "10001"},
-    "story_fields_required": {
-      "summary": "英文标题",
-      "description": "正文",
-      "components": [{"name": "sw-cp"}],
-      "fixVersions_note": "项目内版本名，如 I210v1/I240v1（查 GET /rest/api/2/project/C097FAWVW/versions）",
-      "duedate_rule": "创建日 + 7 天",
-      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"J02\"}]"], "note": "该项目唯一选项 J02"},
-      "assignee": {"name": "Hua.Yao"}
-    },
-    "problem_fields_required": {
-      "issuetype": {"id": "10902"},
-      "summary": "英文标题",
-      "customfield_12006_ProblemType": {"value": "Defect", "options": ["Defect", "Performance Issue", "Aftermarket issue", "Other"]},
-      "customfield_12007_ProblemDescription": "问题描述+复现步骤（英文/中文均可）；⚠️ Problem 类型 screen 上没有 description 字段，正文一律放此字段，传 description 会 400",
-      "components": [{"name": "sw-cp"}],
-      "customfield_11100_Origin": {"value": "Internal"},
-      "customfield_12539_Visible": {"value": "Internal only"},
-      "customfield_11101_Severity": {"options": ["S", "A", "B", "C"]},
-      "reporter": {"name": "Hua.Yao"},
-      "customfield_15000_VehicleVariant": {"format": "数组", "examples": ["[{\"value\": \"J02\"}]"]},
-      "versions_note": "影响版本选填；项目版本 I210v1~I240v1 均已 released"
-    },
-    "reference_ticket": "C097FAWVW-23（FAWVW Story 模板单：components sw-cp、变体 J02）、C097FAWVW-27（Problem 实测单）"
+  "issuelinks": {
+   "Implements_JRQ": {
+    "type": "implemented",
+    "outwardIssue": "需求单",
+    "inwardIssue": "新 Story",
+    "required": false
+   },
+   "Link_to_Problems": {
+    "type": "is solved by",
+    "direction": "问题单 is solved by 新 Story",
+    "required": false
+   }
   }
+ },
+ "IDC310GAC": {
+  "project": {
+   "key": "IDC310GAC"
+  },
+  "issuetype": {
+   "id": "10001"
+  },
+  "fields_required": {
+   "summary": "英文标题（笔记 H1 同名）",
+   "description": "正文",
+   "components": [
+    {
+     "name": "Diagnostic"
+    }
+   ],
+   "fixVersions_note": "项目内版本名，固定 AY7_G020v1_251015 ",
+   "duedate_rule": "创建日 + 7 天",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"GAC AY7\"}]",
+     "[{\"value\": \"GAC T68\"}]"
+    ],
+    "note": "按问题单/需求单实际变体填"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   }
+  },
+  "issuelinks": {
+   "Implements_JRQ": {
+    "type": "implemented",
+    "outwardIssue": "需求单",
+    "inwardIssue": "新 Story",
+    "required": false
+   },
+   "Link_to_Problems": {
+    "type": "is solved by",
+    "direction": "问题单 is solved by 新 Story",
+    "required": false
+   }
+  },
+  "reference_ticket": "IDC310GAC-7833（模板单：fixVersion AY7_G020v1_251015、components Diagnostic）"
+ },
+ "D3ACYI": {
+  "project": {
+   "key": "D3ACYI"
+  },
+  "issuetype": {
+   "id": "10001"
+  },
+  "fields_required": {
+   "summary": "英文标题（笔记 H1 同名）",
+   "description": "正文",
+   "components": [
+    {
+     "name": "sw-cp"
+    }
+   ],
+   "fixVersions_note": "项目内版本名。⚠️ 取当前周期版本（2026-11-11 实测：V2XEU_V470v1_1106~1120；查 GET /rest/api/2/project/D3ACYI/versions 取未 released 且覆盖今天的），不用固定 V2XEU_V460v1——D3ACYI-1803（v6_1010~1020）与 D3ACYI-2354（v7→V470v1）两单均按当前周期版本创建成功",
+   "duedate_rule": "创建日 + 7 天",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"iCAR V2X EU-V25/V27 海外\"}]"
+    ],
+    "note": "按问题单/需求单实际变体填"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   },
+   "issuelinks_note": "⚠️ D3ACYI 项目 create 请求体与 issue update 均拒绝 issuelinks 字段（screen 限制，2026-11-11 实测 400），issue 级 POST /issue/{key}/issuelinks 端点 404；必须用全局 POST /rest/api/2/issueLink 创建关联"
+  },
+  "issuelinks": "同 _general（implemented / is solved by，选填）",
+  "reference_ticket": "D3ACYI-1941（IDC300CHERY Story 模板单：components sw-cp、变体 iCAR V2X EU-V25/V27 海外）"
+ },
+ "F4CMC": {
+  "project": {
+   "key": "F4CMC"
+  },
+  "issuetype": {
+   "id": "10001"
+  },
+  "fields_required": {
+   "summary": "英文标题（笔记 H1 同名）",
+   "description": "正文",
+   "components": [
+    {
+     "name": "sw-cp"
+    }
+   ],
+   "fixVersions_note": "项目内版本名，固定 M110",
+   "duedate_rule": "创建日 + 7 天",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"CMC RX\"}]"
+    ],
+    "note": "按问题单/需求单实际变体填"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   }
+  },
+  "issuelinks": "同 _general（implemented / is solved by，选填）",
+  "reference_ticket": "F4CMC-38（IFC4CMC Story 模板单：fixVersion M110、components sw-cp、变体 CMC RX）"
+ },
+ "D1CYC": {
+  "project": {
+   "key": "D1CYC"
+  },
+  "issuetype": {
+   "id": "10001"
+  },
+  "fields_required": {
+   "summary": "英文标题（笔记 H1 同名）",
+   "description": "正文",
+   "components": [
+    {
+     "name": "sw-cp"
+    }
+   ],
+   "fixVersions_note": "项目内版本名，固定 T480v1.0",
+   "duedate_rule": "创建日 + 7 天",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"JETOUR T1J FL3\"}]"
+    ],
+    "note": "按问题单/需求单实际变体填"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   }
+  },
+  "issuelinks": "同 _general（implemented / is solved by，选填）",
+  "reference_ticket": "D1CYC-2345（IDC100CHERY Story 模板单：fixVersion T480v1.0、components sw-cp、变体 JETOUR T1J FL3）"
+ },
+ "IDC310BAIC": {
+  "project": {
+   "key": "IDC310BAIC"
+  },
+  "issuetype": {
+   "id": "10001"
+  },
+  "fields_required": {
+   "summary": "英文标题（笔记 H1 同名）",
+   "description": "正文",
+   "components": [
+    {
+     "name": "sw-cp"
+    }
+   ],
+   "fixVersions_note": "项目内版本名，固定 B230",
+   "duedate_rule": "创建日 + 7 天",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"BAIC N60\"}]"
+    ],
+    "note": "按问题单/需求单实际变体填"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   }
+  },
+  "issuelinks": "同 _general（implemented / is solved by，选填）",
+  "reference_ticket": "IDC310BAIC-1352（IDC310BAIC Story 模板单：fixVersion B230、components sw-cp、变体 BAIC N60）"
+ },
+ "C097FAWVW": {
+  "project": {
+   "key": "C097FAWVW"
+  },
+  "_note": "J02 项目（一汽捷达 C097 — Execution）。Story 参数取自模板单 C097FAWVW-23；Problem 参数为 2026-11-17 实测（C097FAWVW-27）",
+  "issuetype": {
+   "id": "10001"
+  },
+  "story_fields_required": {
+   "summary": "英文标题",
+   "description": "正文",
+   "components": [
+    {
+     "name": "sw-cp"
+    }
+   ],
+   "fixVersions_note": "项目内版本名，如 I210v1/I240v1（查 GET /rest/api/2/project/C097FAWVW/versions）",
+   "duedate_rule": "创建日 + 7 天",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"J02\"}]"
+    ],
+    "note": "该项目唯一选项 J02"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   }
+  },
+  "problem_fields_required": {
+   "issuetype": {
+    "id": "10902"
+   },
+   "summary": "英文标题",
+   "customfield_12006_ProblemType": {
+    "value": "Defect",
+    "options": [
+     "Defect",
+     "Performance Issue",
+     "Aftermarket issue",
+     "Other"
+    ]
+   },
+   "customfield_12007_ProblemDescription": "问题描述+复现步骤（英文/中文均可）；⚠️ Problem 类型 screen 上没有 description 字段，正文一律放此字段，传 description 会 400",
+   "components": [
+    {
+     "name": "sw-cp"
+    }
+   ],
+   "customfield_11100_Origin": {
+    "value": "Internal"
+   },
+   "customfield_12539_Visible": {
+    "value": "Internal only"
+   },
+   "customfield_11101_Severity": {
+    "options": [
+     "S",
+     "A",
+     "B",
+     "C"
+    ]
+   },
+   "reporter": {
+    "name": "Hua.Yao"
+   },
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"J02\"}]"
+    ]
+   },
+   "versions_note": "影响版本选填；项目版本 I210v1~I240v1 均已 released"
+  },
+  "reference_ticket": "C097FAWVW-23（FAWVW Story 模板单：components sw-cp、变体 J02）、C097FAWVW-27（Problem 实测单）"
+ },
+ "CMCRXJ6B": {
+  "project": {
+   "key": "CMCRXJ6B",
+   "id": "16800"
+  },
+  "note": "CMC RX 需求项目：仅有 Requirement(10300) 类型，不能建 Story（createmeta 端点对该项目报「问题不存在」，用 editmeta 查类型）；customfield_15000 不在屏幕上。Story 一律建在 F4CMC 项目（见 F4CMC 节），再 implemented 关联回 CMCRXJ6B 需求单。components（需求单用）：DIA。",
+  "issuelinks": "Story(implemented→CMCRXJ6B 需求单) 在 F4CMC 侧创建，type implemented 跨项目可用（2026-11-17 CMCRXJ6B-1403→F4CMC-109 实测）",
+  "reference_ticket": "CMCRXJ6B-1403（Requirement 模板：fixVersion Z010V2 id 27058、components DIA、变体字段不可用）"
+ }
 }
