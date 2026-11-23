@@ -4,6 +4,9 @@
 
 流程 (按 configs/*.yaml 深合并配置启停, 详见 specs/2026-09-19-dem-autogen-etas-feature-config-design.md):
   check_dtc_table  校验 DTC 表            (脚本尚未引入, 开启即报错)
+  gen_dem_general  DemGeneral 侧容器生成 (使能条件组 + 快照/扩展数据栈, 见
+                  docs/design/2026-11-20-dem-autogen-etas-gen-dem-general-design.md;
+                  二级配置 enable_condition_group/extended_freeze_data 控制子开关)
   gen_dem_table    gen_dem_arxml + 紧接 BSW 代码生成 (ISOLAR headless, 失败降级 Cobra)
                   二级配置 jumpdown/jumpup 控制 DemDebounceCounterJumpDown/JumpUp
   gen_event_ctrl   生成 Dem_PrjSpecificControl.c
@@ -29,12 +32,13 @@ from types import SimpleNamespace
 GEN_TOOLS = Path(__file__).resolve().parent
 
 DEM_ARXML_SCRIPT = GEN_TOOLS / "gen_dem_arxml" / "Dem_arxml_Script.py"
+GEN_GENERAL_SCRIPT = GEN_TOOLS / "gen_dem_general" / "gen_dem_general.py"
 EVENT_CTRL_SCRIPT = GEN_TOOLS / "gen_event_ctrl" / "Gen_EventAvailable_Control_Script.py"
 FIMFID_SCRIPT = GEN_TOOLS / "gen_fim_code" / "gen_fim_code.py"
 CONFIGS_DIR = GEN_TOOLS / "configs"
 
-FEATURES = ("check_dtc_table", "gen_dem_table", "gen_event_ctrl",
-            "gen_fim_code")
+FEATURES = ("check_dtc_table", "gen_dem_general", "gen_dem_table",
+            "gen_event_ctrl", "gen_fim_code")
 
 # RTA-CAR 盘位: 本机 D:, 生成服务器 13.10 为 C:, 依次探测 (RTA_CAR_HOME 可覆盖)
 RTA_CAR_HOME_DEFAULT = next(p for p in (
@@ -108,6 +112,22 @@ def load_feature_config(project: str):
                 if not isinstance(val, bool):
                     fail("gen_dem_table.%s 必须是布尔" % j)
                 v[j] = val
+        elif k == "gen_dem_general":
+            if not isinstance(v, dict):
+                fail("gen_dem_general 必须是含 enabled 布尔键的映射")
+            bad = [j for j in v if j not in ("enabled", "enable_condition_group",
+                                             "extended_freeze_data")]
+            if bad:
+                fail("gen_dem_general 含未知二级键: %s (允许: enabled, "
+                     "enable_condition_group, extended_freeze_data)"
+                     % ", ".join(sorted(map(str, bad))))
+            if not isinstance(v.get("enabled"), bool):
+                fail("gen_dem_general 必须是含 enabled 布尔键的映射")
+            for j in ("enable_condition_group", "extended_freeze_data"):
+                val = v.get(j, False)
+                if not isinstance(val, bool):
+                    fail("gen_dem_general.%s 必须是布尔" % j)
+                v[j] = val
         elif not isinstance(v, bool):
             fail("%s 必须是布尔" % k)
     return cfg, source
@@ -139,19 +159,19 @@ def resolve_repo_paths(repo: Path, project: str):
     )
 
 
-def discover_excel(repo: Path, project: str, excel_arg):
-    """定位输入 Excel: --excel 指定优先, 否则在 cpj_*/tools/<变体>/e2e_dem/ 下
-    自动发现唯一 IDC_EVM_Config*.xlsx (排除 *_merged.xlsx 中间产物)."""
+def discover_excel(repo: Path, project: str, excel_arg, pattern: str):
+    """定位输入 Excel: --excel* 指定优先, 否则在 cpj_*/tools/<变体>/e2e_dem/ 下
+    自动发现唯一 <pattern>*.xlsx (排除 *_merged.xlsx 中间产物)."""
     if excel_arg:
         p = Path(excel_arg).resolve()
         if not p.is_file():
             fail("Excel 不存在: %s" % p)
         return p
-    hits = [p for p in sorted(repo.glob("cpj_*/tools/%s/e2e_dem/IDC_EVM_Config*.xlsx" % project))
+    hits = [p for p in sorted(repo.glob("cpj_*/tools/%s/e2e_dem/%s*.xlsx" % (project, pattern)))
             if not p.name.endswith("_merged.xlsx")]
     if len(hits) != 1:
-        fail("cpj_*/tools/%s/e2e_dem/ 下 IDC_EVM_Config*.xlsx (排除 _merged) 匹配 %d 个 (需恰好 1): %s%s"
-             % (project, len(hits), [str(h) for h in hits],
+        fail("cpj_*/tools/%s/e2e_dem/ 下 %s*.xlsx (排除 _merged) 匹配 %d 个 (需恰好 1): %s%s"
+             % (project, pattern, len(hits), [str(h) for h in hits],
                 "" if hits else " (该变体目录不存在或无 Excel, 可用 --excel 手动指定)"))
     return hits[0].resolve()
 
@@ -329,6 +349,9 @@ def main():
                         help="变体名 (如 rx, 对应 configs/<变体名>.yaml 与 cpj_*/tools/<变体>/e2e_dem/)")
     parser.add_argument("--excel", default=None,
                         help="IDC_EVM_Config*.xlsx 路径 (缺省自动发现; 变体目录下有多个表时必须指定)")
+    parser.add_argument("--excel-general", default=None,
+                        help="IDC_DemGeneral_Config*.xlsx 路径, gen_dem_general 输入 "
+                             "(缺省自动发现; 仅 gen_dem_general 启用时需要)")
     args = parser.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -337,11 +360,13 @@ def main():
 
     feat_on = {
         "check_dtc_table": cfg["check_dtc_table"],
+        "gen_dem_general": cfg["gen_dem_general"]["enabled"],
         "gen_dem_table": cfg["gen_dem_table"]["enabled"],
         "gen_event_ctrl": cfg["gen_event_ctrl"],
         "gen_fim_code": cfg["gen_fim_code"],
     }
     needed_scripts = {
+        "gen_dem_general": GEN_GENERAL_SCRIPT,
         "gen_dem_table": DEM_ARXML_SCRIPT,
         "gen_event_ctrl": EVENT_CTRL_SCRIPT,
         "gen_fim_code": FIMFID_SCRIPT,
@@ -355,9 +380,13 @@ def main():
                    for i, name in enumerate(enabled)}
 
     paths = resolve_repo_paths(repo, args.config)
-    excel = discover_excel(repo, args.config, args.excel)
+    excel = discover_excel(repo, args.config, args.excel, "IDC_EVM_Config")
 
     print("[dem_autogen_etas] Excel     : %s" % excel)
+    if feat_on["gen_dem_general"]:
+        general_excel = discover_excel(repo, args.config, args.excel_general,
+                                       "IDC_DemGeneral_Config")
+        print("[dem_autogen_etas] GenExcel  : %s" % general_excel)
     print("[dem_autogen_etas] MCU 仓库  : %s" % repo)
     print("[dem_autogen_etas] 车型      : %s" % args.config)
     print("[dem_autogen_etas] BswRta    : %s" % paths.bswrta)
@@ -368,6 +397,28 @@ def main():
 
     if cfg["check_dtc_table"]:
         fail("check_dtc_table 脚本尚未引入")
+
+    if feat_on["gen_dem_general"]:
+        gg = cfg["gen_dem_general"]
+        step_t0 = time.time()
+        run_step("%s 生成 DemGeneral 侧容器 (ecg=%s, efd=%s)"
+                 % (step_titles["gen_dem_general"],
+                    gg["enable_condition_group"], gg["extended_freeze_data"]),
+                 [sys.executable, str(GEN_GENERAL_SCRIPT), str(general_excel), str(paths.arxml),
+                  str(gg["enable_condition_group"]).lower(),
+                  str(gg["extended_freeze_data"]).lower()],
+                 cwd=GEN_GENERAL_SCRIPT.parent)
+        if paths.arxml.stat().st_mtime < step_t0 - 1:
+            fail("gen_dem_general 声称成功但 arxml 未被重写: %s" % paths.arxml)
+        # 内容兜底: 对应开关 ON 时, 受管类型容器必须在 arxml 里 (删除后重建失败 = 锚点缺失)
+        arxml_text = paths.arxml.read_text(encoding="utf-8", errors="replace")
+        for switch, anchor in (("enable_condition_group",
+                                "Dem/DemGeneral/DemEnableConditionGroup</DEFINITION-REF>"),
+                               ("extended_freeze_data",
+                                "Dem/DemGeneral/DemDataElementClass</DEFINITION-REF>")):
+            if gg[switch] and arxml_text.count(anchor) < 1:
+                fail("gen_dem_general 后 arxml 缺少 %s 容器 (子脚本静默失败?): %s"
+                     % (anchor.split("/")[-1].split("<")[0], paths.arxml))
 
     if feat_on["gen_dem_table"]:
         gd = cfg["gen_dem_table"]

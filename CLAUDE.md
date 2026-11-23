@@ -12,6 +12,7 @@
 - **JIRA 状态流转**：流转路线、transition id、必填字段、400 排错链一律先查 [jira-operation.md](.claude/references/jira-operation.md)（权威源：创建参数配置 jira-story-params.json + 状态流转），不要凭记忆猜 transition id；API 实测值与该文档冲突时以文档为准并及时更新文档
 - **AUTOSAR 生成代码**：`cpj_*/autosar/` 下源码的人工修改规则（patch 标记防生成覆盖等）一律先查 [autosar-code-generation.md](.claude/references/autosar-code-generation.md)（权威源，名称：autosar 代码生成规格；patch 规则是其中一个章节）
 - **DTC 表导入**（EVM 诊断问卷导入类需求的硬规则）：修正表格必须通知需求创建人、表格必须上传 zos_msg、校验失败修表不修工具等，一律先查 [dtc-table-import.md](.claude/references/dtc-table-import.md)（权威源）
+- **DemGeneral 配置表编辑**（`IDC_DemGeneral_Config*.xlsx`，gen_dem_general 输入，AI 维护非人工填写）：sheet schema、取值规则、依赖方向、修改场景操作序列、改表后必做验证，一律先查 [dem-general-config-table.md](.claude/references/dem-general-config-table.md)（权威源）；sheet 是唯一真源，禁止绕过表直接手改 arxml 受管容器
 
 ## 路径角色
 

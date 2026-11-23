@@ -1,5 +1,9 @@
 # 通用配置: 各车型共用基线, 项目 yaml 只写差异项深合并覆盖
 check_dtc_table: false        # 脚本尚未引入, 占位
+gen_dem_general:              # DemGeneral 侧容器 (使能条件组 + 快照/扩展数据栈), 见 2026-11-20 设计文档
+  enabled: true
+  enable_condition_group: true
+  extended_freeze_data: true
 gen_dem_table:
   enabled: true
   jumpdown: false       # 注意: 旧脚本硬编码缺省为 true, 这里显式改为 false
