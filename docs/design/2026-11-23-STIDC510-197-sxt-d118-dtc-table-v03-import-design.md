@@ -128,7 +128,7 @@ V0.3 xlsx（cpj_smartxtruck/tools/sxt_a/e2e_dem/，替换 V0.2 xlsx）
 | 4 | mcu_app_j6 | `cpj_smartxtruck/autosar/sxt_a/BswRta/integration/src/bsw/Dem/user/Dem_PrjSpecificControl.c` | 生成 |
 | 5 | mcu_app_j6 | `cpj_smartxtruck/evm_cfg/var/src/vehicle/sxt_a/_gen/evm_cfg_iSysFidCfg.cpp` | **不提交**（见 ADR #5：committed 基线陈旧，本单不动 evm_cfg） |
 | 6 | mcu_app_j6 | `cpj_smartxtruck/evm_cfg/var/inc/vehicle/sxt_a/evm_cfg/evm_cfg_FidCfg.hpp` + `zx_sys_evm_cfg_fimcfg.hpp` | **不提交**（同 #5） |
-| 7 | zos_msg | `Gen_evm_dem_Script/IDC_EVM_Config_Smartxtrunk_D118_V0.3_20261118.xlsx` | 上传 V0.3（替换现有 `..._D118_V1.0_20260727.xlsx`，按 R3 硬规则 2） |
+| 7 | zos_msg | `Gen_evm_dem_Script/IDC_EVM_Config_Smartxtruck_D118_V0.3_20261118.xlsx` | 上传 V0.3（删 `..._Smartxtruck_D118_V1.0_20260727.xlsx`、加 V0.3，按 R3 硬规则 2）。**文件名须用 `Smartxtruck`(c)**：zos 按 `EVM_CFG_FILE_NAME=IDC_EVM_Config_Smartxtruck_D118`（见 `config/product/Smartxtruck/D118/global.yaml` 的 `ZX_BSW_EVM_CFG_FILE_NAME`）做 `find -name "<prefix>_*"` 匹配，mcu tools 目录的 `Smartxtrunk`(k) 拼写不适用 zos（mcu 侧用 `IDC_EVM_Config*` 通配，拼写无影响） |
 | 8 | develop_workflow | `tools/autosar_gen/Dem_AutoGen/Dem_AutoGen_Etas/gen_dem_arxml/Dem_arxml_Script.py` | RCore_Event 表名按前缀自动识别（原硬编码 d310 → 支持 d510），向后兼容 d310 |
 | 9 | develop_workflow | `tools/autosar_gen/Dem_AutoGen/Dem_AutoGen_Etas/gen_fim_code/Merge_ExcelSheets.py` | 同上：RCore_Event 表名按前缀自动识别 |
 
@@ -188,7 +188,7 @@ V0.3 xlsx（cpj_smartxtruck/tools/sxt_a/e2e_dem/，替换 V0.2 xlsx）
 | # | 问题描述 | 影响 | 状态 |
 | :--- | :--- | :--- | :--- |
 | 1 | map.yaml（dtc/event/fimfid）是否随 mcu 提交 | 影响提交范围 | 待确认（先例 F4CMC-70 同步，默认同步） |
-| 2 | zos_msg 现有 `D118_V1.0_20260727.xlsx` 版本号与 V0.x 序列不一致 | 上传时删除/覆盖策略 | 按「删旧加新」上传 V0.3，删除 V1.0（待生成时核对 zos 侧引用） |
+| 2 | zos_msg 现有 `D118_V1.0_20260727.xlsx` 版本号与 V0.x 序列不一致 | 上传时删除/覆盖策略 | 已解：EVM_CFG_FILE_NAME=`IDC_EVM_Config_Smartxtruck_D118`(c 拼写)，按 `find "<prefix>_*"` 匹配。上传 `IDC_EVM_Config_Smartxtruck_D118_V0.3_20261118.xlsx`(c)、删除 V1.0（PR zos_msg#706） |
 | 3 | `gen_event_ctrl` 子工具仍硬编码 `RCore_Event_d310`（本单 `gen_event_ctrl=false` 未触发） | 后续若启用 `gen_event_ctrl` 会失败 | 已知，暂不改（本单不启用）；后续启用时按同法按前缀识别 |
 | 4 | committed `evm_cfg` 基线陈旧（1107 事件/35 FID 组，早于 V0.2），与 Dem 表长期不一致 | evm_cfg 侧 FID 上报映射可能与当前事件集不符 | 待评估：需确认 EVM FID 上报功能是否实际启用、是否需按 V0.3 刷新 evm_cfg（涉及 1107→1800 事件、35→1 组的大改，另行立项核对） |
 | 5 | **sxt_a develop 构建链接失败（阻塞台架验证）**：`Os_Entry_Pps_Icu2Isr` 未定义（`os/gen/Os_Cfg.c` 向量表仅引用无定义）+ `__dso_handle` 未定义（`time_sync/sxt_a/.../time_sync_runnable_customer.cpp` 的 C++ 全局 `g_ins_timeSyncRtc` 静态构造，链接用 `-nostartfiles` 排除 crt） | 整机 `J6_MCU_DEBUG.elf` 无法链接，无法刷写台架 | **已 A/B 确认属 IDC510-6471（`6e5d2b9ea` regenerate RTA-OS with Pps_Icu2Isr）遗留缺陷，与 Dem 导入无关**（clean develop 同样失败）。本单按「Dem 源编译通过即提交、台架验证待阻塞项修复后补」推进；需另开单由 IDC510-6471 owner 修复（补 `Os_Entry_Pps_Icu2Isr` 定义 + 处理 C++ 全局 `__dso_handle`） |
