@@ -10,6 +10,8 @@ from Create_DemDebounceTimeBaseClass import insert_debounce_time_based_to_arxml
 import os
 import sys
 
+import pandas as pd
+
 if __name__ == "__main__":
     # 命令行参数：<excel路径> <arxml路径> [jumpdown] [jumpup]（jump 缺省 true，兼容手工运行）
     if len(sys.argv) not in (3, 5):
@@ -26,9 +28,15 @@ if __name__ == "__main__":
     # 1. Excel 文件路径（由调用方传入，不再硬编码车型文件名）
     excel_path = sys.argv[1]
 
-    # 合并默认的3个工作表，添加来源标识，不去重
+    # 合并 3 个工作表：RCore_Event 表名随平台不同（d310/d510 等），按前缀自动识别后显式传入
+    all_sheets = pd.ExcelFile(excel_path).sheet_names
+    rcore_sheets = [s for s in all_sheets if s.startswith("RCore_Event")]
+    if len(rcore_sheets) != 1:
+        print(f"错误: 需恰好 1 个 RCore_Event* 工作表, 实际 {rcore_sheets}")
+        sys.exit(1)
     merged_data, full_path_with_name, only_name = merge_excel_sheets(
-        original_path=excel_path  # 原文件带路径
+        original_path=excel_path,  # 原文件带路径
+        sheet_names=["PF_Event", rcore_sheets[0], "CPJ_Event_Net"]
     )
     print(f"合并后数据行数：{len(merged_data)}")
 

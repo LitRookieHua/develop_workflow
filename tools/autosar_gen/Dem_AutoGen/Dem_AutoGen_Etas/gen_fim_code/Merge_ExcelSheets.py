@@ -64,6 +64,11 @@ def merge_excel_sheets(
     try:
         # 检查工作表是否存在
         all_sheets = pd.ExcelFile(original_path).sheet_names
+        # RCore_Event 表名随平台不同（d310/d510 等）：按前缀自动识别替换默认 d310
+        rcore = [s for s in all_sheets if s.startswith("RCore_Event")]
+        if len(rcore) == 1:
+            sheet_names = [rcore[0] if s.startswith("RCore_Event") else s
+                           for s in sheet_names]
         missing_sheets = [s for s in sheet_names if s not in all_sheets]
         if missing_sheets:
             raise ValueError(f"缺少工作表：{missing_sheets}")

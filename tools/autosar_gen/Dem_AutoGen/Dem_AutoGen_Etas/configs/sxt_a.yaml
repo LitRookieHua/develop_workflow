@@ -1,0 +1,5 @@
+# sxt_a: 对齐 V0.2 旧 bat 缺省, jumpdown/jumpup 为 true
+gen_dem_table:
+  enabled: true
+  jumpdown: true
+  jumpup: true
