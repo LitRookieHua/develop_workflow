@@ -44,6 +44,25 @@ grep -rn '<S52E046PATCH P' cpj_gac/autosar/s52-e046/
 
 生成工具覆盖文件后，被覆盖丢失的 patch 需按标记逐条对照重打（先例：分析报告 `docs/analysis/` 与 Story 笔记中记录的 patch 内容）。
 
+### 1.5 ISOLAR BSW 生成会重生成整个 BSW（不止目标模块）
+
+Dem/Dcm/Nvm AutoGen 内部的 ISOLAR headless BSW 生成会**从 arxml 重新生成整套 BswRta 源码**，不是只覆盖目标模块。后果有两个：
+
+1. **未标记的人工改动被抹掉**：老变体基线里可能存在从未加 PATCH 标记的手改（先例：2026-11-23 J02 EVM 导入 C097FAWVW-35，`veh_j02` 基线的 `Dem_Cfg_EventsCallback.h` 中 `DemCallbackDTCStatusChanged_User` extern 无标记，生成后直接消失）；补回时必须加 `<{项目}PATCH P{id}>`。
+2. **无关模块产生大量连带改动**（格式/顺序/版本号漂移等），不得整包提交。
+
+生成后的标准处置：
+
+```bash
+git status                       # 看连带改动范围
+git diff --stat                  # 目标模块外的改动一律不保留
+git checkout -- <目标模块外的路径>   # 只保留本需求目标模块产物
+```
+
+先例 commit 信息写法（J02 EVM 导入）：`Only Dem/FiM/CanSM-config output is kept from the Dem_AutoGen run; unrelated BSW regen collateral is reverted to preserve existing hand patches.`
+
+新变体首次跑生成前，先 `grep -rn 'PATCH P' cpj_*/` 摸底（基线可能零标记），生成后按 `git diff` 逐条找回丢失的手改。
+
 ## 2. 路径
 
 ### （1）10.0.13.10服务器
@@ -99,3 +118,4 @@ grep -rn '<S52E046PATCH P' cpj_gac/autosar/s52-e046/
 | 2026-10-20 | 初版：patch 标记规则从 CLAUDE.md 迁入并扩充（检查/重放流程） | IDC310GAC-7835 交付（用户定规） |
 | 2026-10-30 | 生成迁移 10.0.13.10服务器（双平台），28.98 弃用；标准流程改为 10.0.13.10服务器生成 → scp 12.42 → 编译 → 12.42 提交；路径章节重构为「服务器 + 本地备用」 | 用户定规（远程生成体系落地） |
 | 2026-10-30 | 定规工具入口：autosar 生成一律用各 AutoGen 主 python 入口（含 map 表），禁用仓库遗留 bat / 直接调子工具 | 用户定规（RX V3.0 导入踩坑：bat 无 ISOLAR 生成） |
+| 2026-11-25 | 新增 §1.5：ISOLAR BSW 生成重生成整个 BSW，会抹掉未标记手改、并产生无关模块连带改动；给出生成后只保留目标模块产物的处置流程 | J02 EVM V0.1 导入（C097FAWVW-35）：Dem extern 手改被抹，补 J02PATCH P1 |
