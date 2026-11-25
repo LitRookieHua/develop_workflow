@@ -37,3 +37,12 @@
 - 并发压测复现：后台线程 0x7DF 功能寻址 3E 80（间隔 45/90/180/300ms 轮转）+ 主线程 10 03 / 27 序列；判定重入后 27 01 返回零种子 / NRC 0x24 即 bug 复现
 - `testcases/` 存放早期顺序负载用例（case_d3acyi1832_*.yaml，经 diag_test/run_case.py 跑）；`logs/` 存放压测产物（run.log + trace.blf）与插桩证据（com68_capture_20261016_evidence.log）
 - 根因与修复结论见 Obsidian 笔记《V2xeu Fix Lock State Reset on 1003 Switch》
+
+## j02_dem_table_v01/ — C097FAWVW-35：J02 EVM V0.1 导入后 Dem 表验证
+
+    cd tests/harness/j02_dem_table_v01
+    python verify_dem_table.py [--config <j02_cx.yaml>] [--clear]
+
+- 连接 ECU 后先进 10 03 + develop 解锁；19 0A 全量支持 DTC 与 `configs/j02/dtc_map.yaml`（42 条）逐条比对，19 02 FF 输出状态非零 DTC 及状态位解码，22 2A0D/2A0E/2A0F 解 event_map（当前/本周期/历史），22 2A1D 解 fimfid_map，85 02/01 验 DTC 设置控制
+- `testcases/dem_table_v01.yaml` 为同范围的前缀级回归用例（经 diag_test/run_case.py 跑，10 步全 PASS）；`logs/` 存运行产物（run.log/result.csv/trace.blf）
+- map 表由 Dem_AutoGen `gen_map_yaml` 生成（`veh_j02/tools/e2e_dem/`），已复制到 `tools/DiagnosticTester/configs/j02/` 供 `dem` 子命令与本案共用

@@ -1,0 +1,39 @@
+# J02 EVM V0.1 导入（C097FAWVWREQ-507 / C097FAWVW-35）DTC/event/FiMFID 服务级验证
+# 只做响应前缀判定；DTC 全表逐条比对用 verify_dem_table.py
+steps:
+  - name: 进扩展会话
+    request: "1003"
+    expect: "5003"
+  - name: develop 解锁（2A0D/2A0E/2A0F/2A1D 读取前置）
+    security_access: develop
+  - name: 19 02 FF 读支持 DTC（正响应头）
+    request: "1902FF"
+    expect: "5902"
+    timeout_ms: 2000
+  - name: 19 0A 报告支持 DTC（正响应头）
+    request: "190A"
+    expect: "590A"
+    timeout_ms: 2000
+  - name: 22 2A0D 当前 event 位图
+    request: "222A0D"
+    expect: "622A0D"
+    timeout_ms: 3000
+  - name: 22 2A0E 本周期 event 位图
+    request: "222A0E"
+    expect: "622A0E"
+    timeout_ms: 3000
+  - name: 22 2A0F 历史 event 位图
+    request: "222A0F"
+    expect: "622A0F"
+    timeout_ms: 3000
+  - name: 22 2A1D 当前 FiMFID 位图
+    request: "222A1D"
+    expect: "622A1D"
+    timeout_ms: 3000
+  - name: 85 02 关闭 DTC 设置
+    request: "8502"
+    expect: "C502"
+  - name: 85 01 打开 DTC 设置
+    request: "8501"
+    expect: "C501"
+on_fail: abort
