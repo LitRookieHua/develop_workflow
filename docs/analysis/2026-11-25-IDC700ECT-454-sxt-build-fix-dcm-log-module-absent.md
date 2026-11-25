@@ -135,7 +135,7 @@
 * **编译验证**: sxt/sxt_a/sxt_b 三变体编译通过（2026-11-25 用户确认）
 * **bench 复现说明（降级）**: 编译失败类问题，编译通过即修复验证，无运行时行为变化（仅去除日志输出），无需台架 A/B 复现
 * **回归确认**: 钳位逻辑（IDC310GAC-9773 本体）保持不变，仅日志调用注释
-* **正式提交后验证**: PR 合入 develop 后回填（见 §7.2）
+* **正式提交后验证**: PR #2284 已合入 develop（2026-11-25），合入后 develop 三变体编译即恢复（修复即编译验证，无需额外复验）
 
 ---
 
@@ -153,8 +153,8 @@
 | 发现(报告) | 2026-11-25 | Hua.Yao | sxt 变体编译失败 |
 | 根因确认 | 2026-11-25 | Hua.Yao | Log.h 缺失，9773 补丁引入 |
 | 修复验证通过 | 2026-11-25 | Hua.Yao | 三变体编译通过 |
-| 正式提交 | 2026-11-25 | Hua.Yao | 待回填（commit hash / PR 链接） |
-| 关闭 | 待 PR 合并后回填 | — | Story 两步流转至已解决 |
+| 正式提交 | 2026-11-25 | Hua.Yao | commit `3f26939b7` @ feature/IDC700ECT-454-sxt-dcm-log-module-absent；PR [#2284](https://bitbucket.imotion.ai:7990/projects/MCU/repos/mcu_app_j6/pull-requests/2284) |
+| 关闭 | 2026-11-25 | — | PR #2284 已合并（bot_ci + Lucas.Han 批准）；Story 两步流转至已解决 |
 
 ---
 
