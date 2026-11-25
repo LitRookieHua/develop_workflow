@@ -14,7 +14,8 @@ def keepalive_frame(functional_id: int, is_fd: bool) -> CanFrame:
     0x80 抑制正响应，不等待 RX。encode() 自动把 SF 补齐到 8 字节（目标 ECU 要求）。
     """
     data = encode(bytes.fromhex("3E80"), is_fd)[0]
-    return CanFrame(functional_id, data, is_fd=is_fd, bitrate_switch=is_fd)
+    return CanFrame(functional_id, data, is_fd=is_fd, bitrate_switch=is_fd,
+                    is_extended=functional_id > 0x7FF)
 
 
 def clamp_period_ms(v: int) -> int:

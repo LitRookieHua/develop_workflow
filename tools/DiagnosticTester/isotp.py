@@ -5,7 +5,7 @@ import queue
 import threading
 import time
 
-from can_driver import CanDriver, CanFrame
+from can_driver import CanDriver, CanFrame, is_extended_id
 
 SF, FF, CF, FC = 0x0, 0x1, 0x2, 0x3
 
@@ -219,7 +219,9 @@ class IsoTpTransport:
                 time.sleep(0.05)
 
     def _send_frame(self, data: bytes):
-        frame = CanFrame(self.tx_id, data, is_fd=self.is_fd, bitrate_switch=self.is_fd)
+        # 扩展帧标志按当前 tx_id 推导：功能寻址临时切 tx_id 后自动跟随
+        frame = CanFrame(self.tx_id, data, is_fd=self.is_fd, bitrate_switch=self.is_fd,
+                         is_extended=is_extended_id(self.tx_id))
         with self._send_lock:
             self.driver.send(frame)
         if self.tap:

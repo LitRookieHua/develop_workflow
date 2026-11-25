@@ -83,8 +83,9 @@ def parse_id(v, where: str) -> int:
             i = int(s, 16)
         except ValueError:
             raise ConfigError(f"{where}: '{v}' 不是合法 CAN ID")
-    if not 0x001 <= i <= 0x7FF:
-        raise ConfigError(f"{where}: CAN ID 超出 11 位标准帧范围 0x001-0x7FF：0x{i:X}")
+    if not 0x001 <= i <= 0x1FFFFFFF:
+        raise ConfigError(f"{where}: CAN ID 超出范围（11 位标准帧 0x001-0x7FF / "
+                          f"29 位扩展帧 0x001-0x1FFFFFFF）：0x{i:X}")
     return i
 
 
@@ -403,7 +404,8 @@ def run_flow(cfg: dict, testcase: dict, driver, run_dir, log_hook=None,
                     for f in frames:
                         frame = CanFrame(diag["functional_id"], f,
                                          is_fd=cfg["can"]["fd"],
-                                         bitrate_switch=cfg["can"]["fd"])
+                                         bitrate_switch=cfg["can"]["fd"],
+                                         is_extended=diag["functional_id"] > 0x7FF)
                         driver.send(frame)
                         rec.frame(frame, False)
                         if frame_hook is not None:

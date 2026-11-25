@@ -78,7 +78,7 @@ class Recorder:
     def frame(self, frame, is_rx: bool, ts: float | None = None):
         msg = can.Message(timestamp=ts if ts is not None else time.time(),
                           arbitration_id=frame.can_id, data=frame.data,
-                          is_extended_id=False, is_fd=frame.is_fd,
+                          is_extended_id=frame.is_extended, is_fd=frame.is_fd,
                           bitrate_switch=frame.bitrate_switch, is_rx=is_rx)
         with self._blf_lock:
             if self._closed:

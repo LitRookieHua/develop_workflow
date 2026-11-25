@@ -21,12 +21,17 @@ class FakeInitConfig(Structure):
 
 
 class FakeCanFrame(Structure):
-    _fields_ = [("can_id", c_uint), ("can_dlc", c_ubyte), ("data", c_ubyte * 8)]
+    # 与真实绑定一致的位域布局：can_id 29 位 + err/rtr/eff 标志位
+    _fields_ = [("can_id", c_uint, 29), ("err", c_uint, 1), ("rtr", c_uint, 1),
+                ("eff", c_uint, 1), ("can_dlc", c_ubyte), ("__pad", c_ubyte),
+                ("__res0", c_ubyte), ("__res1", c_ubyte), ("data", c_ubyte * 8)]
 
 
 class FakeCanFdFrame(Structure):
-    _fields_ = [("can_id", c_uint), ("len", c_ubyte), ("brs", c_ubyte),
-                ("data", c_ubyte * 64)]
+    _fields_ = [("can_id", c_uint, 29), ("err", c_uint, 1), ("rtr", c_uint, 1),
+                ("eff", c_uint, 1), ("len", c_ubyte), ("brs", c_ubyte, 1),
+                ("esi", c_ubyte, 1), ("__res", c_ubyte, 6), ("__res0", c_ubyte),
+                ("__res1", c_ubyte), ("data", c_ubyte * 64)]
 
 
 class FakeTransmitData(Structure):
@@ -94,6 +99,7 @@ class FakeZCAN:
         spec = self.fd_frames.pop(0)
         f = msgs[0].frame
         f.can_id, f.len, f.brs = spec["id"], spec["len"], spec.get("brs", 0)
+        f.eff = spec.get("eff", 0)
         for i, b in enumerate(spec["data"]):
             f.data[i] = b
         return self.rcv_ret
@@ -102,6 +108,7 @@ class FakeZCAN:
         spec = self.can_frames.pop(0)
         f = msgs[0].frame
         f.can_id, f.can_dlc = spec["id"], len(spec["data"])
+        f.eff = spec.get("eff", 0)
         for i, b in enumerate(spec["data"]):
             f.data[i] = b
         return self.rcv_ret
@@ -110,14 +117,14 @@ class FakeZCAN:
         for i in range(n):
             f = msgs[i].frame
             self.transmitted.append(
-                ("fd", f.can_id, f.len, bytes(f.data[:f.len]), int(f.brs)))
+                ("fd", f.can_id, f.len, bytes(f.data[:f.len]), int(f.brs), int(f.eff)))
         return n
 
     def Transmit(self, chn, msgs, n):
         for i in range(n):
             f = msgs[i].frame
             self.transmitted.append(
-                ("can", f.can_id, f.can_dlc, bytes(f.data[:f.can_dlc])))
+                ("can", f.can_id, f.can_dlc, bytes(f.data[:f.can_dlc]), int(f.eff)))
         return n
 
 
@@ -188,8 +195,8 @@ def test_send_fd_pads_short_to_8(fake_cx):
     d = CxCanFdDriver()
     try:
         d.send(CanFrame(0x70C, b"\x22\xf1\x95", is_fd=True))
-        kind, cid, ln, data, brs = fake_cx.transmitted[0]
-        assert (kind, cid, ln, brs) == ("fd", 0x70C, 8, 0)
+        kind, cid, ln, data, brs, eff = fake_cx.transmitted[0]
+        assert (kind, cid, ln, brs, eff) == ("fd", 0x70C, 8, 0, 0)
         assert data == b"\x22\xf1\x95" + b"\x00" * 5
     finally:
         d.close()
@@ -201,7 +208,7 @@ def test_send_fd_dlc_ladder(fake_cx):
     try:
         payload = bytes(range(9))  # 9 字节补到 12
         d.send(CanFrame(0x70C, payload, is_fd=True))
-        kind, cid, ln, data, brs = fake_cx.transmitted[0]
+        kind, cid, ln, data, brs, eff = fake_cx.transmitted[0]
         assert (kind, ln) == ("fd", 12)
         assert data == payload + b"\x00" * 3
     finally:
@@ -239,6 +246,29 @@ def test_send_mode_mismatch_raises(fake_cx):
         d.close()
 
 
+def test_send_classic_extended_sets_eff(fake_cx):
+    from can_driver import CxCanFdDriver
+    d = CxCanFdDriver(fd=False)
+    try:
+        d.send(CanFrame(0x18FFF772, b"\x02\x10\x03", is_fd=False, is_extended=True))
+        kind, cid, dlc, data, eff = fake_cx.transmitted[0]
+        assert (kind, cid, dlc, eff) == ("can", 0x18FFF772, 3, 1)
+        assert data == b"\x02\x10\x03"
+    finally:
+        d.close()
+
+
+def test_send_fd_extended_sets_eff(fake_cx):
+    from can_driver import CxCanFdDriver
+    d = CxCanFdDriver()
+    try:
+        d.send(CanFrame(0x18FFF772, bytes(20), is_fd=True, is_extended=True))
+        kind, cid, ln, data, brs, eff = fake_cx.transmitted[0]
+        assert (kind, cid, ln, eff) == ("fd", 0x18FFF772, 20, 1)
+    finally:
+        d.close()
+
+
 # ---------- 接收与关闭 ----------
 
 def test_recv_fd_frame(fake_cx):
@@ -264,6 +294,32 @@ def test_recv_classic_frame(fake_cx):
         assert f is not None
         assert f.can_id == 0x78C and not f.is_fd
         assert f.data == b"\x02\x10\x03"
+    finally:
+        d.close()
+
+
+def test_recv_classic_extended_frame(fake_cx):
+    from can_driver import CxCanFdDriver
+    d = CxCanFdDriver()
+    try:
+        fake_cx.can_frames.append({"id": 0x18FFF77A, "eff": 1,
+                                  "data": b"\x06\xf1\x95\x01\x02\x03\x04\x05"})
+        f = d.recv(timeout_s=2)
+        assert f is not None
+        assert f.can_id == 0x18FFF77A and f.is_extended and not f.is_fd
+    finally:
+        d.close()
+
+
+def test_recv_fd_extended_frame(fake_cx):
+    from can_driver import CxCanFdDriver
+    d = CxCanFdDriver()
+    try:
+        fake_cx.fd_frames.append({"id": 0x18FFF77A, "len": 8, "brs": 1, "eff": 1,
+                                  "data": b"\x06" * 8})
+        f = d.recv(timeout_s=2)
+        assert f is not None
+        assert f.can_id == 0x18FFF77A and f.is_extended and f.is_fd
     finally:
         d.close()
 

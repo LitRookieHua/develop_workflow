@@ -1,0 +1,19 @@
+# SXT (mcu_app_j6 sxt_a) 诊断配置
+# CAN ID 为 29 位扩展帧（CanIf_PBcfg.c: ADC_DiagReq_CAN0_IN 0x18FFF772 /
+# ADC_DiagResp_CAN0_OUT 0x18FFF77A / Func_DiagReq 0x18FFF7DF），超 0x7FF 自动按扩展帧收发
+can:
+  device: CX-USBCANFD
+  channel: 0          # CAN0 诊断通道
+  baudrate: 500000    # 仲裁域 500K（Can EcucValues）
+  data_baudrate: 2000000  # 数据域 2M：诊断 RX 连接 FD 使能，多帧请求需 FD 帧承载
+  fd: true
+
+diagnostic:
+  request_id: 0x18FFF772
+  response_id: 0x18FFF77A
+  functional_id: 0x18FFF7DF
+
+timing:
+  p2_ms: 50
+  p2star_ms: 5000
+  step_delay_ms: 100

@@ -85,8 +85,9 @@ CAN 卡已插、目标 ECU 已上电；testcase/ 不入仓库，首次使用需
   `fd` 是否 CAN FD、`baudrate` 仲裁域波特率；
   `data_baudrate` 为 FD 数据域波特率（可省略，默认 2000000）。
 - **diagnostic** — 诊断寻址：`request_id` 请求 ID、`response_id` 响应 ID、
-  `functional_id` 功能寻址 ID（可选，功能寻址步骤必需）。三个 ID 均限
-  11 位标准帧范围 0x001-0x7FF。
+  `functional_id` 功能寻址 ID（可选，功能寻址步骤必需）。三个 ID 支持 11 位
+  标准帧（0x001-0x7FF）与 29 位扩展帧（0x001-0x1FFFFFFF），超过 0x7FF 自动
+  按扩展帧收发。
 - **timing** — 超时与节奏：`p2_ms` 单响应超时（默认 50）、`p2star_ms`
   收到 NRC 0x78 后的等待窗口（默认 5000）、`step_delay_ms` 步骤间默认
   间隔（默认 100）。三项均可省略。

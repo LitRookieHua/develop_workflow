@@ -11,6 +11,15 @@ from pathlib import Path
 
 FD_DLC_LEN = (0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64)
 
+# 29 位扩展帧标志位：ZLG/创芯收发结构体的 can_id bit31=扩展帧、bit30=远程帧，
+# 驱动层收帧时剥掉标志位存净 ID，发帧时按 is_extended 补回
+EXT_FLAG = 0x80000000
+ID_MASK = 0x1FFFFFFF
+
+
+def is_extended_id(can_id: int) -> bool:
+    return can_id > 0x7FF
+
 
 def dlc_to_len(dlc: int) -> int:
     return FD_DLC_LEN[dlc & 0x0F]
@@ -33,6 +42,7 @@ class CanFrame:
     data: bytes
     is_fd: bool = False
     bitrate_switch: bool = False
+    is_extended: bool = False
 
 
 class CanDriver:
@@ -149,15 +159,17 @@ class ZlgCanDriver(CanDriver):
                         for m in msgs[:cnt]:
                             f = m.frame
                             self.rx_queue.put(CanFrame(
-                                f.can_id, bytes(f.data)[:f.len], is_fd=True,
-                                bitrate_switch=bool(f.flags & 0x1)))
+                                f.can_id & ID_MASK, bytes(f.data)[:f.len], is_fd=True,
+                                bitrate_switch=bool(f.flags & 0x1),
+                                is_extended=bool(f.can_id & EXT_FLAG)))
                 n = z.GetReceiveNum(self._chn, zmod.ZCAN_TYPE_CAN)
                 if n:
                     msgs, cnt = z.Receive(self._chn, min(n, BATCH), 100)
                     for m in msgs[:cnt]:
                         f = m.frame
                         self.rx_queue.put(CanFrame(
-                            f.can_id, bytes(f.data)[:f.can_dlc], is_fd=False))
+                            f.can_id & ID_MASK, bytes(f.data)[:f.can_dlc], is_fd=False,
+                            is_extended=bool(f.can_id & EXT_FLAG)))
         except Exception as e:
             self.rx_error = e
             print(f"CAN 接收线程异常退出：{e}", file=sys.stderr)
@@ -179,7 +191,7 @@ class ZlgCanDriver(CanDriver):
                 # 故最小补齐到 8；更长载荷按 DLC 阶梯补齐
                 wire_len = max(8, dlc_to_len(len_to_dlc(len(frame.data))))
                 data = frame.data + bytes(wire_len - len(frame.data))  # 补齐到合法长度，避免未初始化字节上线
-                f.can_id = frame.can_id
+                f.can_id = frame.can_id | (EXT_FLAG if frame.is_extended else 0)
                 f.len = wire_len  # 结构体 len 为字节数（0-64），固件自行转 DLC
                 f.flags = 0x1 if frame.bitrate_switch else 0x0  # bit0 BRS 加速
                 m.transmit_type = 0
@@ -191,7 +203,7 @@ class ZlgCanDriver(CanDriver):
                 msgs = (zmod.ZCAN_Transmit_Data * 1)()
                 m = msgs[0]
                 f = m.frame
-                f.can_id = frame.can_id
+                f.can_id = frame.can_id | (EXT_FLAG if frame.is_extended else 0)
                 f.can_dlc = len(frame.data)
                 m.transmit_type = 0
                 for i, b in enumerate(frame.data):
@@ -269,9 +281,11 @@ class CxCanFdDriver(CanDriver):
                         num = z.ReceiveFD(self._chn, msgs, cnt, 0)
                         for m in msgs[:max(num, 0)]:
                             f = m.frame
+                            # 创芯绑定是位域结构：can_id 仅 29 位，扩展帧标志在独立 eff 位
                             self.rx_queue.put(CanFrame(
                                 f.can_id, bytes(f.data)[:f.len], is_fd=True,
-                                bitrate_switch=bool(f.brs)))
+                                bitrate_switch=bool(f.brs),
+                                is_extended=bool(f.eff)))
                 n = z.GetReceiveNum(self._chn, cx.TYPE_CAN)
                 if n > 0:
                     cnt = min(n, BATCH)
@@ -280,7 +294,8 @@ class CxCanFdDriver(CanDriver):
                     for m in msgs[:max(num, 0)]:
                         f = m.frame
                         self.rx_queue.put(CanFrame(
-                            f.can_id, bytes(f.data)[:f.can_dlc], is_fd=False))
+                            f.can_id, bytes(f.data)[:f.can_dlc], is_fd=False,
+                            is_extended=bool(f.eff)))
                 time.sleep(0.01)  # 官方示例节拍，避免 CPU 空转
         except Exception as e:
             self.rx_error = e
@@ -303,6 +318,7 @@ class CxCanFdDriver(CanDriver):
                 wire_len = max(8, dlc_to_len(len_to_dlc(len(frame.data))))
                 data = frame.data + bytes(wire_len - len(frame.data))
                 f.can_id = frame.can_id
+                f.eff = 1 if frame.is_extended else 0  # 创芯位域结构：扩展帧标志在 eff 位
                 f.len = wire_len  # 结构体 len 为字节数（0-64），固件自行转 DLC
                 f.brs = 1 if frame.bitrate_switch else 0
                 m.transmit_type = 0
@@ -315,6 +331,7 @@ class CxCanFdDriver(CanDriver):
                 m = msgs[0]
                 f = m.frame
                 f.can_id = frame.can_id
+                f.eff = 1 if frame.is_extended else 0  # 创芯位域结构：扩展帧标志在 eff 位
                 f.can_dlc = len(frame.data)
                 m.transmit_type = 0
                 for i, b in enumerate(frame.data):

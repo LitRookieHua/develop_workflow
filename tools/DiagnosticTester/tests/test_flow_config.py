@@ -191,11 +191,18 @@ def test_unknown_timing_key(tmp_path):
     assert "timing.p2s_ms" in str(e.value)
 
 
-def test_id_out_of_11bit_range(tmp_path):
-    text = CFG.replace("request_id: 0x70C", "request_id: 0x800")
+def test_id_out_of_29bit_range(tmp_path):
+    text = CFG.replace("request_id: 0x70C", "request_id: 0x20000000")
     with pytest.raises(ConfigError) as e:
         load(tmp_path, cfg_text=text)
-    assert "11 位" in str(e.value)
+    assert "29 位" in str(e.value)
+
+
+def test_29bit_extended_id_accepted(tmp_path):
+    # 29 位扩展帧 ID 合法（SXT 项目 0x18FFF772 等），超过 0x7FF 自动按扩展帧收发
+    text = CFG.replace("request_id: 0x70C", "request_id: 0x18FFF772")
+    cfg, _ = load(tmp_path, cfg_text=text)
+    assert cfg["diagnostic"]["request_id"] == 0x18FFF772
 
 
 def test_bad_addressing(tmp_path):
