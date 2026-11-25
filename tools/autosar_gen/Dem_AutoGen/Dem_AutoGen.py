@@ -86,28 +86,38 @@ def davinci_map_args(repo: Path, config: str, extra):
 
 
 def etas_map_args(repo: Path, config: str, extra):
-    """推导 ETAS 的 gen_map_yaml 参数 (project_dir, out_dir, fimcfg)."""
-    hits = sorted(repo.glob("cpj_*/autosar/%s/BswRta" % config))
+    """推导 ETAS 的 gen_map_yaml 参数 (project_dir, out_dir, fimcfg).
+
+    v1: cpj_*/autosar/<config>/BswRta + cpj_*/evm_cfg/var/...
+    v2: cpj_*/<config>/autosar/BswRta + cpj_*/<config>/evm_cfg/{inc,src}
+    """
+    hits = sorted(list(repo.glob("cpj_*/autosar/%s/BswRta" % config))
+                  + list(repo.glob("cpj_*/%s/autosar/BswRta" % config)))
     if len(hits) != 1:
-        fail("ETAS BswRta 定位失败: cpj_*/autosar/%s/BswRta 匹配 %d 个 (需恰好 1)"
-             % (config, len(hits)))
+        fail("ETAS BswRta 定位失败: cpj_*/autosar/%s/BswRta 或 "
+             "cpj_*/%s/autosar/BswRta 匹配 %d 个 (需恰好 1)"
+             % (config, config, len(hits)))
     bswrta = hits[0].resolve()
     excel_arg = extra_value(extra, "--excel")
     if excel_arg:
         out_dir = Path(excel_arg).resolve().parent
     else:
         xs = [p for p in sorted(
-                  repo.glob("cpj_*/tools/%s/e2e_dem/IDC_EVM_Config*.xlsx"
-                            % config))
+                  list(repo.glob("cpj_*/tools/%s/e2e_dem/IDC_EVM_Config*.xlsx" % config))
+                  + list(repo.glob("cpj_*/%s/tools/e2e_dem/IDC_EVM_Config*.xlsx" % config)))
               if not p.name.endswith("_merged.xlsx")]
         if len(xs) != 1:
-            fail("ETAS map 输出目录定位失败: cpj_*/tools/%s/e2e_dem/"
-                 "IDC_EVM_Config*.xlsx (排除 _merged) 匹配 %d 个 (需恰好 1; "
-                 "可用 --excel 指定)" % (config, len(xs)))
+            fail("ETAS map 输出目录定位失败: cpj_*/tools/%s/e2e_dem/ 或 "
+                 "cpj_*/%s/tools/e2e_dem/ 下 IDC_EVM_Config*.xlsx (排除 _merged) "
+                 "匹配 %d 个 (需恰好 1; 可用 --excel 指定)"
+                 % (config, config, len(xs)))
         out_dir = xs[0].parent
-    cpj = bswrta.parent.parent.parent   # cpj_x/autosar/<config>/BswRta -> cpj_x
-    fimcfg = (cpj / "evm_cfg" / "var" / "inc" / "vehicle" / config
-              / "evm_cfg" / FIMCFG_HPP)
+    cpj = bswrta.parent.parent.parent   # cpj_x/autosar/<config>/BswRta 或 cpj_x/<config>/autosar/BswRta -> cpj_x
+    if (cpj / "evm_cfg" / "var").is_dir():
+        fimcfg = (cpj / "evm_cfg" / "var" / "inc" / "vehicle" / config
+                  / "evm_cfg" / FIMCFG_HPP)
+    else:
+        fimcfg = cpj / config / "evm_cfg" / "inc" / "evm_cfg" / FIMCFG_HPP
     return bswrta, out_dir, fimcfg
 
 
@@ -128,7 +138,8 @@ def main():
     if not repo.is_dir():
         fail("路径不存在或不是目录: %s" % repo)
 
-    etas = bool(list(repo.glob("cpj_*/autosar/%s/BswRta" % args.config)))
+    etas = bool(list(repo.glob("cpj_*/autosar/%s/BswRta" % args.config))
+                or list(repo.glob("cpj_*/%s/autosar/BswRta" % args.config)))
     davinci = bool(davinci_microsar_hits(repo, args.config, extra))
     if etas and davinci:
         fail("仓库同时匹配 ETAS 与 Davinci 结构, 无法判型: %s" % repo)
@@ -138,9 +149,9 @@ def main():
         platform, sub_main = "Davinci", DAVINCI_MAIN
     else:
         fail("无法判型 (config=%s):\n"
-             "  ETAS    需 cpj_*/autosar/%s/BswRta\n"
+             "  ETAS    需 cpj_*/autosar/%s/BswRta 或 cpj_*/%s/autosar/BswRta\n"
              "  Davinci 需 */(%s 或 veh_%s)/microsar_cfg"
-             % (args.config, args.config, args.config, args.config))
+             % (args.config, args.config, args.config, args.config, args.config))
     if not sub_main.is_file():
         fail("子工具不存在: %s" % sub_main)
     if not GEN_MAP.is_file():

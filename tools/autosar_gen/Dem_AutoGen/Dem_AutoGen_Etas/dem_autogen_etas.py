@@ -134,25 +134,37 @@ def load_feature_config(project: str):
 
 
 def resolve_repo_paths(repo: Path, project: str):
-    """由 --repo + --config 推导所有目标路径 (glob, 无硬编码; 31 车型实测同构)."""
-    hits = sorted(repo.glob("cpj_*/autosar/%s/BswRta" % project))
+    """由 --repo + --config 推导所有目标路径 (glob, 无硬编码; 31 车型实测同构).
+
+    两种仓库布局:
+      v1 (mcu_app_j6)   : cpj_*/autosar/<变体>/BswRta  + cpj_*/evm_cfg/var/...
+      v2 (mcu_app_j6_v2): cpj_*/<变体>/autosar/BswRta  + cpj_*/<变体>/evm_cfg/{src,inc}
+    """
+    hits = sorted(list(repo.glob("cpj_*/autosar/%s/BswRta" % project))
+                  + list(repo.glob("cpj_*/%s/autosar/BswRta" % project)))
     if len(hits) != 1:
-        fail("cpj_*/autosar/%s/BswRta 匹配 %d 个 (需恰好 1): %s"
-             % (project, len(hits), [str(h) for h in hits]))
+        fail("cpj_*/autosar/%s/BswRta 或 cpj_*/%s/autosar/BswRta 匹配 %d 个 (需恰好 1): %s"
+             % (project, project, len(hits), [str(h) for h in hits]))
     bswrta = hits[0].resolve()
     arxml_hits = [p for p in sorted(bswrta.glob("ecu_config/bsw/gen/*Dem_EcucValues.arxml"))
                   if not p.name.startswith("RTA_BIP_")]
     if len(arxml_hits) != 1:
         fail("ecu_config/bsw/gen/*Dem_EcucValues.arxml (排除 RTA_BIP_) 匹配 %d 个 (需恰好 1)"
              % len(arxml_hits))
-    cpj = bswrta.parent.parent.parent  # cpj_x/autosar/<proj>/BswRta -> cpj_x
+    cpj = bswrta.parent.parent.parent  # cpj_x/autosar/<proj>/BswRta 或 cpj_x/<proj>/autosar/BswRta -> cpj_x
+    if (cpj / "evm_cfg" / "var").is_dir():
+        fimfid_cpp_out = cpj / "evm_cfg" / "var" / "src" / "vehicle" / project / "_gen"
+        fimfid_h_out = cpj / "evm_cfg" / "var" / "inc" / "vehicle" / project / "evm_cfg"
+    else:
+        fimfid_cpp_out = cpj / project / "evm_cfg" / "src" / "_gen"
+        fimfid_h_out = cpj / project / "evm_cfg" / "inc" / "evm_cfg"
     return SimpleNamespace(
         repo=repo,
         bswrta=bswrta,
         arxml=arxml_hits[0],
         dem_ctrl_out=bswrta / "integration" / "src" / "bsw" / "Dem" / "user",
-        fimfid_cpp_out=cpj / "evm_cfg" / "var" / "src" / "vehicle" / project / "_gen",
-        fimfid_h_out=cpj / "evm_cfg" / "var" / "inc" / "vehicle" / project / "evm_cfg",
+        fimfid_cpp_out=fimfid_cpp_out,
+        fimfid_h_out=fimfid_h_out,
         cobra=bswrta / "ecu_config" / "cobra" / "Cobra.exe",
         confgen_log=bswrta / "_log" / "BSW_ConfGen_ECUGeneration.txt",
         bsw_log=bswrta / "_log" / "rta-bsw.log",
@@ -160,18 +172,23 @@ def resolve_repo_paths(repo: Path, project: str):
 
 
 def discover_excel(repo: Path, project: str, excel_arg, pattern: str):
-    """定位输入 Excel: --excel* 指定优先, 否则在 cpj_*/tools/<变体>/e2e_dem/ 下
-    自动发现唯一 <pattern>*.xlsx (排除 *_merged.xlsx 中间产物)."""
+    """定位输入 Excel: --excel* 指定优先, 否则在 <变体>/tools/e2e_dem/ 下
+    自动发现唯一 <pattern>*.xlsx (排除 *_merged.xlsx 中间产物).
+    v1: cpj_*/tools/<变体>/e2e_dem/ ; v2: cpj_*/<变体>/tools/e2e_dem/
+    """
     if excel_arg:
         p = Path(excel_arg).resolve()
         if not p.is_file():
             fail("Excel 不存在: %s" % p)
         return p
-    hits = [p for p in sorted(repo.glob("cpj_*/tools/%s/e2e_dem/%s*.xlsx" % (project, pattern)))
+    hits = [p for p in sorted(
+                list(repo.glob("cpj_*/tools/%s/e2e_dem/%s*.xlsx" % (project, pattern)))
+                + list(repo.glob("cpj_*/%s/tools/e2e_dem/%s*.xlsx" % (project, pattern))))
             if not p.name.endswith("_merged.xlsx")]
     if len(hits) != 1:
-        fail("cpj_*/tools/%s/e2e_dem/ 下 %s*.xlsx (排除 _merged) 匹配 %d 个 (需恰好 1): %s%s"
-             % (project, pattern, len(hits), [str(h) for h in hits],
+        fail("cpj_*/tools/%s/e2e_dem/ 或 cpj_*/%s/tools/e2e_dem/ 下 %s*.xlsx "
+             "(排除 _merged) 匹配 %d 个 (需恰好 1): %s%s"
+             % (project, project, pattern, len(hits), [str(h) for h in hits],
                 "" if hits else " (该变体目录不存在或无 Excel, 可用 --excel 手动指定)"))
     return hits[0].resolve()
 
