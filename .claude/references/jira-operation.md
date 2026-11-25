@@ -118,6 +118,8 @@ OPEN（开启/新建）→ IN_PROGRESS（进行中/开发中）→ RESOLVED（�
 | --- | --- | --- | --- |
 | 1 | `261` | Reviewed → Implemented | 无（Linked Story 已解决即可，F4CMC-105 实测） |
 
+> **261 步工作流校验（2026-11-25 IDC310BAICREQ-6700 实测）**：当 Implementation approach=`New` 且 Function Indicator=`Functional` 时，校验器要求存在「is implemented by Story/Task/Requirement」关联，且**方向必须是 Requirement 单上的 inwardIssue = Story**（建链请求里 `outwardIssue` 填 Requirement、`inwardIssue` 填 Story；在 Requirement 上 GET 表现为 `inwardIssue` 条目）。方向反了（Requirement outward→Story）会报 `限制条件：Implementation approach是New，且Functional indicator是Functional，需要链接is implemented by Story or Task or Requirement`；该报错不能靠 transition body 的 fields 解除（这些字段不在流转屏上，PUT 也会报 not on the appropriate screen）。排查：对比已关闭同类需求（如 IDC310BAICREQ-1158）的 issuelinks 方向，`DELETE /rest/api/2/issueLink/<id>` 后按正确方向重建。
+
 #### 流转 400 报错的排查链（2026-10-20 五张单实测踩坑）
 
 1. **fixVersions 必须传单子所属项目的版本 id**：同名版本在不同项目 id 不同（实例：`T09-Y_G710v6_260915` 在 IDC310GAC 项目是 27818，传成其他项目的 27445 报无效值）。先 `GET /rest/api/2/issue/<key>?fields=fixVersions,versions` 或查项目版本列表拿本单项目的 id
