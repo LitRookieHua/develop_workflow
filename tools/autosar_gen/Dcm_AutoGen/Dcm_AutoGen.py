@@ -193,6 +193,17 @@ def discover_version_json(repo: Path, config: str, json_arg):
     return hits[0].resolve()
 
 
+def discover_vd_template(version_json: Path):
+    """从 version_did JSON 路径推导 cpp 模板 (modules/<customer>/<变体>.json ->
+    仓库根 templates/version_did.cpp.in)。存在则返回, 否则 None (回退 gen_did_code
+    内置 VERSION_DID_LANDING)。让 DID 落点集合跟随实际模板, 新增模板数组无需改表。"""
+    root = version_json.parents[2] if len(version_json.parents) > 2 else None
+    if root is None:
+        return None
+    t = root / "templates" / "version_did.cpp.in"
+    return t if t.is_file() else None
+
+
 # ---------------------------------------------------------------- 子步骤执行
 
 def run_step(title, cmd, cwd):
@@ -428,10 +439,12 @@ def main():
                       [py, str(NRC_SCRIPT), str(excel), str(paths.nrc_cpp)],
                       NRC_SCRIPT.parent))
     if cfg["gen_did_code"]:
-        steps.append(("gen_did_code",
-                      [py, str(DID_SCRIPT), str(excel),
-                       str(paths.vehicle_dir), str(version_json)],
-                      DID_SCRIPT.parent))
+        did_cmd = [py, str(DID_SCRIPT), str(excel),
+                   str(paths.vehicle_dir), str(version_json)]
+        vd_template = discover_vd_template(version_json)
+        if vd_template is not None:
+            did_cmd += ["--vd-template", str(vd_template)]
+        steps.append(("gen_did_code", did_cmd, DID_SCRIPT.parent))
     if cfg["gen_rid_code"]:
         steps.append(("gen_rid_code",
                       [py, str(RID_SCRIPT), str(excel), str(paths.vehicle_dir)],

@@ -382,7 +382,7 @@ def _classes_inner(entries):
             protos += _proto("void", "m_validateNRC_%s" % nrc)
         lines += protos
         lines += ["",
-                  "    virtual ~%s() {}" % e["cls"],
+                  "    virtual ~%s() noexcept override {}" % e["cls"],
                   "    zos::uint8_t m_result_u8;",
                   "",
                   "  private:",

@@ -16,7 +16,7 @@
 根据 workspace `config/` 目录查找对应项目名称（如 `ls Y:/01_Src/<工作区>/config/`），修改本地 `.imobuilder` 的 `build_product`（Y: 盘直接改）。已知项目速查：
 
 - TDA4（`Y:\01_Src\01_Workspace_TDA4`）：T1LFL1 → `Chery/T1LFL1_D073/develop`；V2XSEA → `Chery/V2XSEA_D058/develop`
-- J6（`Y:\01_Src\02_Workspace_J6`）：T51 → `Gac/T51_D088/develop`；N60 → `BAIC/N60_D109/develop`；J02 → `FAWVW/J02_C097/develop`
+- J6（`Y:\01_Src\02_Workspace_J6`）：T51 → `Gac/T51_D088/develop`；N60 → `BAIC/N60_D109/develop`；J02 → `FAWVW/J02_C097/mcu/develop`（2026-11-26 核对：MCU 构建产品在 `mcu/` 子目录，顶层 `FAWVW/J02_C097/develop` 不含 mcu_app_j6_v2 项目）
 
 ⚠️ 速查表仅供参考，**一律 `ls config/` 现查确认**，不凭记忆猜（V2 工作区同理）。
 
