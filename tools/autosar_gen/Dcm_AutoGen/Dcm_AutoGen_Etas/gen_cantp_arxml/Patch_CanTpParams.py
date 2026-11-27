@@ -149,8 +149,18 @@ def patch_cantp_arxml(input_arxml, output_arxml, data):
                    data.main_function_period, changes)
 
     # 3. NSdu 行: 按容器 SHORT-NAME
+    #    变体间容器集可能不同 (同一 J02 问卷可能用于含/不含某功能通道的分支),
+    #    表中列了但目标 arxml 没有的容器 -> 警告跳过; 若一个都没命中则由末尾
+    #    "没有任何参数被写入" 兜底报错 (仍能防住列名整体写错)。
     for row in data.nsdu_rows:
-        c = _single_container(root, row["name"])
+        hits = _find_containers(root, row["name"])
+        if not hits:
+            print("[CanTp] WARNING: 目标 arxml 无容器 %s, 跳过该行 (变体差异?)"
+                  % row["name"])
+            continue
+        if len(hits) > 1:
+            _fail("容器 SHORT-NAME=%s 出现 %d 个 (需唯一)" % (row["name"], len(hits)))
+        c = hits[0]
         kind = _container_kind(c)
         if kind is None:
             _fail("容器 %s 不是 CanTpRxNSdu/CanTpTxNSdu 容器 (DEFINITION-REF 后缀不匹配)"
