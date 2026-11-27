@@ -1,7 +1,7 @@
 {
  "_meta": {
   "description": "JIRA Story 创建参数配置（按项目分节）。权威源配套文档：.claude/references/jira-operation.md。新增项目时在顶层加一个项目 key 节，字段含义见配套文档第 1 节。",
-  "updated": "2026-10-21",
+  "updated": "2026-11-25",
   "note": "D3ACYI / F4CMC / D1CYC / IDC310BAIC 参数取自各项目 Story 模板单（见各节 reference_ticket），components 均为 sw-cp"
  },
  "_general": {
@@ -289,6 +289,44 @@
    "versions_note": "影响版本选填；项目版本 I210v1~I240v1 均已 released"
   },
   "reference_ticket": "C097FAWVW-23（FAWVW Story 模板单：components sw-cp、变体 J02）、C097FAWVW-27（Problem 实测单）"
+ },
+ "IDC700ECT": {
+  "project": {
+   "key": "IDC700ECT"
+  },
+  "note": "sxt（smartxtruck/智加）项目 Story。⚠️ sxt 单据现在本项目——IDC510-6471 已迁移为 IDC700ECT-16（老 key 仍可 GET，返回新 key）。2026-11-25 实测创建成功（IDC700ECT-454）",
+  "issuetype": {
+   "id": "10001"
+  },
+  "fields_required": {
+   "summary": "英文标题",
+   "description": "正文（可中文）",
+   "priority": {
+    "name": "Medium"
+   },
+   "components": [
+    {
+     "name": "sw-cp"
+    }
+   ],
+   "fixVersions_note": "当前周期 U010v2（查 GET /rest/api/2/project/IDC700ECT/versions；历史单 U010v1）",
+   "duedate_rule": "创建日 + 7 天",
+   "customfield_15000_VehicleVariant": {
+    "format": "数组",
+    "examples": [
+     "[{\"value\": \"智加\"}]"
+    ],
+    "note": "该项目唯一选项 智加（id 17944）"
+   },
+   "assignee": {
+    "name": "Hua.Yao"
+   },
+   "reporter": {
+    "name": "Hua.Yao"
+   }
+  },
+  "issuelinks": "同 _general（选填）",
+  "reference_ticket": "IDC700ECT-450（Smartxtruck update dtc table V0.3：sw-cp、U010v2、变体智加、priority Medium）"
  },
  "CMCRXJ6B": {
   "project": {
