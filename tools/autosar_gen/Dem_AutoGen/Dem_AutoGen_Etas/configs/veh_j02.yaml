@@ -1,8 +1,8 @@
 # J02 (mcu_app_j6_v2, 变体式布局 cpj_fawvw/veh_j02)
 # 仅覆盖与 common 基线的差异; 其余功能键 (gen_dem_table/gen_fim_code 等) 继承 common.
 # gen_dem_general 使能: 使能条件组来自 EVM 表 04_ECG sheet, 生成到 DemGeneral 侧
-#   (enable_condition_group); extended_freeze_data 本需求不用, 关闭.
+#   (enable_condition_group); extended_freeze_data 驱动 C097FAWVW-39 快照/扩展数据栈重建.
 gen_dem_general:
   enabled: true
   enable_condition_group: true
-  extended_freeze_data: false
+  extended_freeze_data: true
