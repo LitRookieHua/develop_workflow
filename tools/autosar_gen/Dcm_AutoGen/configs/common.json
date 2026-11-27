@@ -1,5 +1,6 @@
 {
     "gen_dcm_arxml": true,
+    "gen_cantp_arxml": true,
     "gen_nrc_code": true,
     "gen_did_code": true,
     "gen_rid_code": true,

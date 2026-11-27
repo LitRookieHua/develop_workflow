@@ -6,6 +6,8 @@
   gen_dcm_arxml     问卷 Service List + DcmDspSession/DcmDspSecurity 表 ->
                     重建 J6B_Dcm_EcucValues.arxml 服务表及 DcmDsp 行容器
                     (Dcm_AutoGen_Etas/gen_dcm_arxml/Dcm_arxml_Script.py)
+  gen_cantp_arxml   问卷 CanTp 表 -> 打补丁 J6B_CanTp_EcucValues.arxml 网络层参数
+                    (Dcm_AutoGen_Etas/gen_cantp_arxml/CanTp_arxml_Script.py)
   gen_nrc_code      问卷 Service List -> 重建 ov_dia_notification.cpp NRC 检查
   gen_did_code      问卷 DID List -> DID 查找表/0x22/0x2E handler + version_did JSON
   gen_rid_code      问卷 RID List -> 0x31 处理器 (纯 NRC 骨架)
@@ -33,14 +35,15 @@ from types import SimpleNamespace
 TOOL_ROOT = Path(__file__).resolve().parent
 
 DCM_ARXML_SCRIPT = TOOL_ROOT / "Dcm_AutoGen_Etas" / "gen_dcm_arxml" / "Dcm_arxml_Script.py"
+CANTP_SCRIPT = TOOL_ROOT / "Dcm_AutoGen_Etas" / "gen_cantp_arxml" / "CanTp_arxml_Script.py"
 NRC_SCRIPT = TOOL_ROOT / "Dcm_AutoGen_User" / "gen_nrc_code.py"
 DID_SCRIPT = TOOL_ROOT / "Dcm_AutoGen_User" / "gen_did_code.py"
 RID_SCRIPT = TOOL_ROOT / "Dcm_AutoGen_User" / "gen_rid_code.py"
 CONFIGS_DIR = TOOL_ROOT / "configs"
 QUESTIONNAIRE_DIR = TOOL_ROOT / "UDS_Diagnostic_Questionnaire"
 
-FEATURES = ("gen_dcm_arxml", "gen_nrc_code", "gen_did_code", "gen_rid_code",
-            "etas_bsw_code_gen")
+FEATURES = ("gen_dcm_arxml", "gen_cantp_arxml", "gen_nrc_code", "gen_did_code",
+            "gen_rid_code", "etas_bsw_code_gen")
 
 # RTA-CAR 盘位: 本机 D:, 生成服务器 13.10 为 C:, 依次探测 (RTA_CAR_HOME 可覆盖)
 RTA_CAR_HOME_DEFAULT = next(p for p in (
@@ -111,12 +114,13 @@ def load_feature_config(config: str):
 
 # ---------------------------------------------------------------- 路径发现
 
-def resolve_repo_paths(repo: Path, config: str):
+def resolve_repo_paths(repo: Path, config: str, need_cantp: bool = False):
     """由 --repo + --config 推导目标路径 (glob, 无硬编码).
 
     兼容两种仓库布局:
       旧 (mcu_app_j6):   cpj_*/autosar/<变体>/BswRta, dia_cfg/var/src/vehicle/<变体>
       v2 (mcu_app_j6_v2): cpj_*/veh_<变体>/autosar/BswRta, veh_<变体>/dia_cfg/src
+    need_cantp=True 时额外定位 *CanTp_EcucValues.arxml (排除 RTA_BIP_, 恰好 1 个).
     """
     cfg = config.lower()
     hits = sorted(repo.glob("cpj_*/autosar/%s/BswRta" % config))
@@ -141,10 +145,19 @@ def resolve_repo_paths(repo: Path, config: str):
         fail("dia_cfg 车辆代码目录匹配 %d 个 (需恰好 1): %s"
              % (len(vd_hits), [str(h) for h in vd_hits]))
     vehicle_dir = vd_hits[0].resolve()
+    cantp_arxml = None
+    if need_cantp:
+        cantp_hits = [p for p in sorted(bswrta.glob("ecu_config/bsw/gen/*CanTp_EcucValues.arxml"))
+                      if not p.name.startswith("RTA_BIP_")]
+        if len(cantp_hits) != 1:
+            fail("ecu_config/bsw/gen/*CanTp_EcucValues.arxml (排除 RTA_BIP_) 匹配 %d 个 (需恰好 1)"
+                 % len(cantp_hits))
+        cantp_arxml = cantp_hits[0].resolve()
     return SimpleNamespace(
         repo=repo,
         bswrta=bswrta,
         arxml=arxml_hits[0].resolve(),
+        cantp_arxml=cantp_arxml,
         vehicle_dir=vehicle_dir,
         nrc_cpp=vehicle_dir / "ov_dia_notification" / "ov_dia_notification.cpp",
         cobra=bswrta / "ecu_config" / "cobra" / "Cobra.exe",
@@ -413,13 +426,14 @@ def main():
     if not enabled:
         fail("configs/common.json 未启用任何功能")
 
-    scripts = {"gen_dcm_arxml": DCM_ARXML_SCRIPT, "gen_nrc_code": NRC_SCRIPT,
+    scripts = {"gen_dcm_arxml": DCM_ARXML_SCRIPT, "gen_cantp_arxml": CANTP_SCRIPT,
+               "gen_nrc_code": NRC_SCRIPT,
                "gen_did_code": DID_SCRIPT, "gen_rid_code": RID_SCRIPT}
     for feat in enabled:
         if feat in scripts and not scripts[feat].is_file():
             fail("脚本不存在 (%s): %s" % (feat, scripts[feat]))
 
-    paths = resolve_repo_paths(repo, args.config)
+    paths = resolve_repo_paths(repo, args.config, need_cantp=cfg["gen_cantp_arxml"])
     excel = discover_excel(args.config, args.excel)
     version_json = (discover_version_json(repo, args.config, args.json)
                     if cfg["gen_did_code"] else None)
@@ -434,6 +448,11 @@ def main():
                       [py, str(DCM_ARXML_SCRIPT), str(excel),
                        str(paths.arxml), str(paths.arxml)],
                       DCM_ARXML_SCRIPT.parent))
+    if cfg["gen_cantp_arxml"]:
+        steps.append(("gen_cantp_arxml",
+                      [py, str(CANTP_SCRIPT), str(excel),
+                       str(paths.cantp_arxml), str(paths.cantp_arxml)],
+                      CANTP_SCRIPT.parent))
     if cfg["gen_nrc_code"]:
         steps.append(("gen_nrc_code",
                       [py, str(NRC_SCRIPT), str(excel), str(paths.nrc_cpp)],
@@ -457,6 +476,8 @@ def main():
     print("[Dcm_AutoGen] 变体      : %s" % args.config)
     print("[Dcm_AutoGen] BswRta    : %s" % paths.bswrta)
     print("[Dcm_AutoGen] Dcm arxml : %s" % paths.arxml)
+    if paths.cantp_arxml:
+        print("[Dcm_AutoGen] CanTp arxml: %s" % paths.cantp_arxml)
     if version_json:
         print("[Dcm_AutoGen] VD JSON   : %s" % version_json)
     print("[Dcm_AutoGen] 配置      : %s (%s)" % (CONFIGS_DIR / "common.json", cfg_source))

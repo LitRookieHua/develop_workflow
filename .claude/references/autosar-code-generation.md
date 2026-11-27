@@ -104,12 +104,27 @@ git checkout -- <目标模块外的路径>   # 只保留本需求目标模块产
 | 工具 | 主入口 | 用法 | 说明 |
 | --- | --- | --- | --- |
 | Dem | `tools\autosar_gen\Dem_AutoGen\Dem_AutoGen.py` | `python Dem_AutoGen.py --repo <mcu仓库> --config <变体>` | 自动判型（ETAS J6 / Davinci TDA4）转发子工具 + 统一跑 gen_map_yaml（dtc/event/fimfid map，输出到 Excel 同目录） |
-| Dcm | `tools\autosar_gen\Dcm_AutoGen\Dcm_AutoGen.py` | `python Dcm_AutoGen.py --repo <mcu_app_j6路径> --config <变体> [--excel <UDS问卷xlsx>] [--json <version_did JSON>]` | J6 ETAS 专用：gen_dcm_arxml → gen_nrc_code → gen_did_code（DID 查找表/0x22/0x2E handler + version_did JSON）→ gen_rid_code → ISOLAR BSW 生成；Excel/JSON 缺省自动发现 |
+| Dcm | `tools\autosar_gen\Dcm_AutoGen\Dcm_AutoGen.py` | `python Dcm_AutoGen.py --repo <mcu_app_j6路径> --config <变体> [--excel <UDS问卷xlsx>] [--json <version_did JSON>]` | J6 ETAS 专用：gen_dcm_arxml → gen_cantp_arxml（CanTp sheet 打补丁 J6B_CanTp_EcucValues.arxml 网络层参数）→ gen_nrc_code → gen_did_code（DID 查找表/0x22/0x2E handler + version_did JSON）→ gen_rid_code → ISOLAR BSW 生成；Excel/JSON 缺省自动发现 |
 | Nvm | `tools\autosar_gen\Nvm_AutoGen\Nvm_AutoGen.py` | `python Nvm_AutoGen.py --repo <mcu仓库> --config <变体> [子工具参数]` | 自动判型（同 Dem），参数原样转发子工具 |
 
 代码为探测式 D:→C:，两台机器零配置通用，`RTA_CAR_HOME` 环境变量仍可显式覆盖。
 
 历史：2026-10-30 前生成本地 D: 完成后 scp 推服务器；10.0.28.98 曾作为 DaVinci 生成服务器，现已弃用。
+
+### 问卷副本同步规则（UDS_Diagnostic_Questionnaire）
+
+问卷 xlsx 存在三份副本，改动必须同步：
+
+| 副本 | 路径 | 角色 |
+| --- | --- | --- |
+| 工具副本 | `tools/autosar_gen/Dcm_AutoGen/UDS_Diagnostic_Questionnaire/<变体>/UDS_Diagnostic_Questionnaire_<变体>.xlsx` | Dcm_AutoGen 生成输入（`discover_excel` 自动发现） |
+| mcu 仓库副本 | `cpj_*/veh_<变体>/dia_cfg/doc/UDS_Diagnostic_Questionnaire_<变体>.xlsx` | 随代码交付的问卷 |
+| 模板 | `tools/autosar_gen/Dcm_AutoGen/UDS_Diagnostic_Questionnaire/UDS_Diagnostic_Questionnaire_Template.xlsx` | 表头 / sheet schema 基线 |
+
+- 改 `dia_cfg/doc` 副本 → 必须同步工具副本（两份保持同内容）；反之亦然——避免工具副本落后导致下次生成回退（先例：J02 v3 改了 mcu 副本，工具副本仍停在 v3 前，直接跑工具会把 P2* 等参数改回旧值）
+- 改表头 / sheet schema（新增列、新增 sheet）→ 必须同步模板
+- 基线从 10.0.12.42 仓库 `origin/develop` HEAD 拉取（本地镜像 / 本地 develop ref 可能落后），改后推回并 md5 核对
+- 批量改表脚本（如 `update_cantp_sheet.py`）放在工具问卷目录：`mode=j02` 填实值、`mode=template` 只写表头（不动 History）
 
 ## 4. 变更记录
 
@@ -119,3 +134,4 @@ git checkout -- <目标模块外的路径>   # 只保留本需求目标模块产
 | 2026-10-30 | 生成迁移 10.0.13.10服务器（双平台），28.98 弃用；标准流程改为 10.0.13.10服务器生成 → scp 12.42 → 编译 → 12.42 提交；路径章节重构为「服务器 + 本地备用」 | 用户定规（远程生成体系落地） |
 | 2026-10-30 | 定规工具入口：autosar 生成一律用各 AutoGen 主 python 入口（含 map 表），禁用仓库遗留 bat / 直接调子工具 | 用户定规（RX V3.0 导入踩坑：bat 无 ISOLAR 生成） |
 | 2026-11-25 | 新增 §1.5：ISOLAR BSW 生成重生成整个 BSW，会抹掉未标记手改、并产生无关模块连带改动；给出生成后只保留目标模块产物的处置流程 | J02 EVM V0.1 导入（C097FAWVW-35）：Dem extern 手改被抹，补 J02PATCH P1 |
+| 2026-11-27 | Dcm_AutoGen 新增 gen_cantp_arxml（问卷 CanTp sheet → 打补丁 J6B_CanTp_EcucValues.arxml）；Dcm 工具说明补该步骤；新增「问卷副本同步规则」（工具/mcu/模板三份副本） | 用户定规（J02 v3 CanTp 手改易漏易错） |
