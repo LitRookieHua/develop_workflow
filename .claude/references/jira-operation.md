@@ -118,6 +118,8 @@ OPEN（开启/新建）→ IN_PROGRESS（进行中/开发中）→ RESOLVED（�
 | --- | --- | --- | --- |
 | 1 | `261` | Reviewed → Implemented | 无（Linked Story 已解决即可，F4CMC-105 实测） |
 
+> **C097FAWVWREQ 项目实测（2026-11-27，J02 v3 批次 14 张单）**：路线相同——开放 →(11) Reviewed →(261) Implemented，261 无必填字段（implemented 链 inwardIssue=Story 即满足校验）。注意部分需求单立项时已被流转到 Reviewed，此时 11 步会 400（流转不存在），直接走 261 即可。
+
 > **261 步工作流校验（2026-11-25 IDC310BAICREQ-6700 实测）**：当 Implementation approach=`New` 且 Function Indicator=`Functional` 时，校验器要求存在「is implemented by Story/Task/Requirement」关联，且**方向必须是 Requirement 单上的 inwardIssue = Story**（建链请求里 `outwardIssue` 填 Requirement、`inwardIssue` 填 Story；在 Requirement 上 GET 表现为 `inwardIssue` 条目）。方向反了（Requirement outward→Story）会报 `限制条件：Implementation approach是New，且Functional indicator是Functional，需要链接is implemented by Story or Task or Requirement`；该报错不能靠 transition body 的 fields 解除（这些字段不在流转屏上，PUT 也会报 not on the appropriate screen）。排查：对比已关闭同类需求（如 IDC310BAICREQ-1158）的 issuelinks 方向，`DELETE /rest/api/2/issueLink/<id>` 后按正确方向重建。
 
 #### 流转 400 报错的排查链（2026-10-20 五张单实测踩坑）

@@ -6,13 +6,13 @@ Windows 本地执行（串口/电源 COM 口都在本机，不走 SSH）。用 `
 
 ```bash
 cd D:/Workspace/01_Projects/02_Src/11_AI/develop_workflow/tools/ProgramBoard
-python ProgramBoard_j6b.py --port <A核串口> --psu-com <电源COM> --config configs/<项目>.json --img-dir <编译输出>/rpu_arm_gcc
+python ProgramBoard_j6b.py --port <A核串口> --psu-com <电源COM> --config configs/<项目>.json --img-dir <编译输出>/<工具链输出目录>
 ```
 
-- `--img-dir` 语义：工作区（老工作区或 V2）编译输出的 `build/<preset>/rpu_arm_gcc` 目录，如：
-  - 老工作区 J6：`Y:/01_Src/02_Workspace_J6/src/<仓库>/build/<preset>/rpu_arm_gcc`
-  - V2 工作区 J6：`Y:/01_Src/02_Workspace_J6_V2/src/<仓库>/build/<preset>/rpu_arm_gcc`
-- 示例：N60（旧仓库）`--config configs/n60_mcu.json --img-dir Y:/01_Src/02_Workspace_J6/src/mcu_app_j6/build/cpj_baic_n60_d310/rpu_arm_gcc`；J02（v2 仓库）`--config configs/j02_mcu.json --img-dir Y:/01_Src/02_Workspace_J6/src/mcu_app_j6_v2/build/cpj_fawvw_j02_d310/rpu_arm_gcc`（镜像文件 `int_rpu_arm8r5_arm_j02_gnu.img`）
+- `--img-dir` 语义：工作区（老工作区或 V2）编译输出的 `build/<preset>/<工具链输出目录>`，工具链目录按项目实测（gnu 项目为 `rpu_arm_gcc`，ghs 项目为 `rpu_arm_ghs`），如：
+  - 老工作区 J6：`Y:/01_Src/02_Workspace_J6/src/<仓库>/build/<preset>/<工具链输出目录>`
+  - V2 工作区 J6：`Y:/01_Src/02_Workspace_J6_V2/src/<仓库>/build/<preset>/<工具链输出目录>`
+- 示例：N60（旧仓库，gcc）`--config configs/n60_mcu.json --img-dir Y:/01_Src/02_Workspace_J6/src/mcu_app_j6/build/cpj_baic_n60_d310/rpu_arm_gcc`；J02（v2 仓库，ghs，2026-11-27 实测）`--config configs/j02_mcu.json --img-dir Y:/01_Src/02_Workspace_J6/src/mcu_app_j6_v2/build/cpj_fawvw_j02_d310/rpu_arm_ghs`（镜像文件 `J6B_MCU_EVM_PLUS_V1.0.img`，目录内另有 `int_rpu_arm8r5_arm_j02_ghs.img` 等镜像）
 
 ## 关键规则
 
