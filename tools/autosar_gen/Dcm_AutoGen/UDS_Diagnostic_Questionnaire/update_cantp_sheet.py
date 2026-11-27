@@ -3,7 +3,7 @@
 
 用法:
   python update_cantp_sheet.py <xlsx_path> <mode>
-    mode = j02      填入 J02 实际值 (CanTpGeneral/Config + 4 个 NSdu 容器)
+    mode = j02      填入 J02 实际值 (CanTpGeneral/Config + 3 个 NSdu 容器)
     mode = template 仅表头 + 1 行空白样例
 
 CanTp sheet 列 (第 1 行表头):
@@ -49,8 +49,6 @@ J02_ROWS = [
     ["RX_UdsRxFnc_Can_Network_Channel", None, None, None, 0, 10, None, None, None, 1000, 60, 1000,
      "CanTpRxNSdu: Bs/STmin/N_Ar/N_Br/N_Cr"],
     ["TX_UdsTxPhy_Can_Network_Channel", None, None, None, None, None, 1000, 1000, 60, None, None, None,
-     "CanTpTxNSdu: N_As/N_Bs/N_Cs"],
-    ["CanTpTxNSdu_Diag_Func_CAN1", None, None, None, None, None, 1000, 1000, 60, None, None, None,
      "CanTpTxNSdu: N_As/N_Bs/N_Cs"],
 ]
 
@@ -129,8 +127,8 @@ def _bump_version(wb):
     ws.cell(row=new_row, column=2, value="2026-11-27")
     ws.cell(row=new_row, column=3, value=author)
     ws.cell(row=new_row, column=4, value=(
-        "Add CanTp sheet (CanTpGeneral/CanTpConfig + 4 NSdu containers): "
-        "PaddingByte/PaddingActivation/MainFunctionPeriod + 9 timing/size params; "
+        "Add CanTp sheet (CanTpGeneral/CanTpConfig + 3 NSdu containers): "
+        "PaddingByte/PaddingActivation/MainFunctionPeriod + Rx/Tx timing/size params; "
         "Dcm_AutoGen gen_cantp_arxml consumes it to patch J6B_CanTp_EcucValues.arxml. "
         "Values per C097FAWVWREQ-95/98~105 (J02 v3)."))
     return new_row, new_ver
