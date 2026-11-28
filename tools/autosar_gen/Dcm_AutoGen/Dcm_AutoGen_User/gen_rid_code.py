@@ -8,6 +8,10 @@
 每个 RID 类实现 NRC13 (长度) / NRC31 (会话) / NRC33 (安全) 校验;
 NRC22 留空 TODO; excute/fill 为 TODO 骨架, 业务逻辑手动接入。
 
+重生成时保留已有业务方法体 (m_excute* / m_fillResponseBuffer* /
+m_updateCurrentStatusCyclicCustomer / m_validateNRC_22): 从旧 cpp 提取原文
+回填, 仅 NRC13/31/33 按问卷重新生成; 幂等 (骨架原样提取, 二次运行零 diff)。
+
 用法:
   python gen_rid_code.py <excel> <vehicle_dir>
     vehicle_dir = dia_cfg/var/src/vehicle/<variant> 目录 (如 ...\\cpj_fawvw\\dia_cfg\\var\\src\\vehicle\\j02)
@@ -49,6 +53,14 @@ SEC_LEVEL = {"LOCK": "idia::E_SECURITY_LEVEL_NULL",
 SEC_ORDER = ["LOCK", "APP", "BOOT", "IMOTION"]
 
 IDENT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+
+# 重生成时保留的方法 (业务逻辑, 非问卷派生); NRC13/31/33 始终按问卷重建
+PRESERVED_METHODS = ("m_excuteStartCustomer", "m_excuteStopCustomer",
+                     "m_fillResponseBufferStartReqCustomer",
+                     "m_fillResponseBufferStopReqCustomer",
+                     "m_fillResponseBufferResultReqCustomer",
+                     "m_updateCurrentStatusCyclicCustomer",
+                     "m_validateNRC_22")
 
 
 def _fail(msg):
@@ -303,7 +315,22 @@ def _nrc33_method(cls, sec):
     return "\n".join(lines)
 
 
-def _handlers_inner(entries):
+def _extract_rid_method(text, cls, method):
+    """从旧 cpp 提取某 RID 类的方法原文 (签名行首到配对 '}'), 没有则 None."""
+    sig = re.search(r"^[ \t]*(?:void|idia::ERoutineStatus)\s+ov_dia::%s::%s\s*\("
+                    % (re.escape(cls), re.escape(method)), text, re.M)
+    if not sig:
+        return None
+    start = _line_start(text, sig.start())
+    brace = text.find("{", sig.end())
+    if brace < 0 or ";" in text[sig.end():brace]:
+        raise RuntimeError("%s::%s 签名后未找到 '{'" % (cls, method))
+    close = _match_brace(text, brace)
+    # 统一为 LF, 由 _regen_region 写回时统一转目标换行符
+    return text[start:close].rstrip().replace("\r\n", "\n")
+
+
+def _handlers_inner(entries, old_text=None):
     blocks = []
     for e in entries:
         ctrls = e["controls"]
@@ -316,18 +343,31 @@ def _handlers_inner(entries):
                   "//****************************************************************************************************************************************"]
         methods = []
         if 0x01 in ctrls:
-            methods.append(_excute_method(e["cls"], "Start"))
+            methods.append((e["cls"], "m_excuteStartCustomer",
+                            _excute_method(e["cls"], "Start")))
         if 0x02 in ctrls:
-            methods.append(_excute_method(e["cls"], "Stop"))
+            methods.append((e["cls"], "m_excuteStopCustomer",
+                            _excute_method(e["cls"], "Stop")))
         for ctrl, kind in [(0x01, "Start"), (0x02, "Stop"), (0x03, "Result")]:
             if ctrl in ctrls:
-                methods.append(_fill_method(e["cls"], kind, ctrls[ctrl]["resp_size"]))
-        methods.append(_cyclic_method(e["cls"]))
-        methods.append(_nrc22_method(e["cls"]))
-        methods.append(_nrc13_method(e["cls"], ctrls))
-        methods.append(_nrc31_method(e["cls"], e["sessions"]))
-        methods.append(_nrc33_method(e["cls"], e["sec"]))
-        blocks.append("\n".join(banner) + "\n\n" + "\n\n".join(methods))
+                methods.append((e["cls"], "m_fillResponseBuffer%sReqCustomer" % kind,
+                                _fill_method(e["cls"], kind, ctrls[ctrl]["resp_size"])))
+        methods.append((e["cls"], "m_updateCurrentStatusCyclicCustomer",
+                        _cyclic_method(e["cls"])))
+        methods.append((e["cls"], "m_validateNRC_22", _nrc22_method(e["cls"])))
+        methods.append((e["cls"], "m_validateNRC_13",
+                        _nrc13_method(e["cls"], ctrls)))
+        methods.append((e["cls"], "m_validateNRC_31",
+                        _nrc31_method(e["cls"], e["sessions"])))
+        methods.append((e["cls"], "m_validateNRC_33",
+                        _nrc33_method(e["cls"], e["sec"])))
+        rendered = []
+        for cls, name, default in methods:
+            kept = None
+            if old_text is not None and name in PRESERVED_METHODS:
+                kept = _extract_rid_method(old_text, cls, name)
+            rendered.append(kept if kept is not None else default)
+        blocks.append("\n".join(banner) + "\n\n" + "\n\n".join(rendered))
     return "\n\n".join(blocks)
 
 
@@ -440,12 +480,15 @@ def main():
 
     wrap = lambda inner: (lambda b, e: b + "\n" + inner + "\n" + e)
 
+    # 业务方法体取自重生成前的 cpp (保留人工实现, NRC13/31/33 仍按问卷重建)
+    handlers_inner = _handlers_inner(entries, cpp_text)
+
     try:
         cpp_text = _regen_region(cpp_text, "RID REGISTRY", "", _registry_inner(entries),
                                  _locate_registry, wrap(_registry_inner(entries)),
                                  source=RID_SOURCE)
-        cpp_text = _regen_region(cpp_text, "RID HANDLER", "", _handlers_inner(entries),
-                                 _locate_handlers, wrap(_handlers_inner(entries)),
+        cpp_text = _regen_region(cpp_text, "RID HANDLER", "", handlers_inner,
+                                 _locate_handlers, wrap(handlers_inner),
                                  source=RID_SOURCE)
         hpp_text = _regen_region(hpp_text, "RID ENUM", "", _enum_inner(entries),
                                  _locate_enum, wrap(_enum_inner(entries)),
